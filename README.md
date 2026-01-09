@@ -356,12 +356,6 @@ gh-pages -d dist
 
 ---
 
-## 📄 Лицензия
-
-Этот проект лицензирован под MIT License - подробности в [LICENSE](LICENSE).
-
----
-
 ## 👥 Авторы
 
 - **MathBot Arena Team** - *Разработка и дизайн*
@@ -377,25 +371,8 @@ gh-pages -d dist
 
 ## 📞 Контакты
 
-- 📧 Email: support@mathbot-arena.com
-- 🐦 Twitter: [@MathBotArena](https://twitter.com/MathBotArena)
-- 💬 Discord: [MathBot Community](https://discord.gg/mathbot)
-- 📱 Telegram: [@MathBotArena](https://t.me/MathBotArena)
-
----
-
-## 📊 Статистика проекта
-
-<div align="center">
-
-![GitHub stars](https://img.shields.io/github/stars/yourusername/mathbot-arena?style=social)
-![GitHub forks](https://img.shields.io/github/forks/yourusername/mathbot-arena?style=social)
-![GitHub watchers](https://img.shields.io/github/watchers/yourusername/mathbot-arena?style=social)
-
-**Made with ❤️ and ☕ by MathBot Arena Team**
-
-</div>
-
+- 📧 Email: info@y7agency.com
+- 📱 Telegram: [@MathBotArena](https://t.me/sergiivoo)
 ---
 
 ## 🎓 Образовательный impact
@@ -421,7 +398,5 @@ gh-pages -d dist
 <div align="center">
 
 **🚀 Готовы начать математическое приключение?**
-
-[Начать игру](https://mathbot-arena-demo.vercel.app) • [Документация](./ARCHITECTURE.md) • [GitHub](https://github.com/yourusername/mathbot-arena)
 
 </div>
