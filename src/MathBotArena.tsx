@@ -18,12 +18,17 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Trophy, Star, Clock, User, Settings, Flame, BookOpen, BarChart3, ArrowLeft, Lightbulb, Swords } from 'lucide-react';
+import { Trophy, Star, Clock, User, Settings, Flame, BookOpen, BarChart3, ArrowLeft, Lightbulb, Swords, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { taskBank, Task, SkillType, getRandomTask } from './data/taskBank';
 import { methodologyGuides, getGuideByTopic } from './data/methodologyGuides';
 import { BattleArena } from './components/BattleArena';
 import { createBattleHero } from './battle/battleMechanics';
+import { I18nProvider } from './i18n/context';
+import { AvatarProfile, AvatarBaseType, AvatarCosmetics, createDefaultAvatar } from './avatar/types';
+import { AvatarSelection } from './avatar/AvatarSelection';
+import { AvatarView } from './avatar/AvatarView';
+import { SkillsDashboard } from './avatar/SkillsDashboard';
 
 // ==================== TYPES ====================
 
@@ -68,6 +73,7 @@ interface PlayerBot {
   xp: number;
   totalXP: number;
   statistics: Statistics;
+  avatarProfile?: AvatarProfile; // Avatar system integration
 }
 
 interface SessionData {
@@ -97,8 +103,8 @@ interface FeedbackData {
 
 // ==================== CONSTANTS ====================
 
-// Build marker for debugging (updated when PvP wired: 2026-01-11)
-const BUILD_TAG = 'v2.0-PVP-WIRED';
+// Build marker for debugging (updated with Avatar System: 2026-01-11)
+const BUILD_TAG = 'v2.1-AVATAR-SKILLS';
 const BUILD_DATE = '2026-01-11';
 
 const AGE_CATEGORIES = {
@@ -281,8 +287,8 @@ const createInitialSession = (): SessionData => ({
 
 const MathBotArena: React.FC = () => {
   // State
-  const [screen, setScreen] = useState<'welcome' | 'register' | 'game' | 'pvp'>('welcome');
-  const [activeTab, setActiveTab] = useState<'training' | 'learning' | 'statistics' | 'guides' | 'account' | 'pvp'>('training');
+  const [screen, setScreen] = useState<'welcome' | 'register' | 'avatar-select' | 'game' | 'pvp'>('welcome');
+  const [activeTab, setActiveTab] = useState<'training' | 'learning' | 'statistics' | 'guides' | 'account' | 'pvp' | 'skills'>('training');
   const [userData, setUserData] = useState<UserData | null>(null);
   const [playerBot, setPlayerBot] = useState<PlayerBot>(createInitialPlayerBot());
   const [session, setSession] = useState<SessionData>(createInitialSession());
@@ -607,8 +613,27 @@ const MathBotArena: React.FC = () => {
         message: `✅ Добро пожаловать, ${name}!\n\n📧 Письмо с подтверждением отправлено на ${email}`
       });
 
-      setScreen('game');
+      // Go to avatar selection
+      setScreen('avatar-select');
     }
+  }, []);
+
+  // ==================== AVATAR SELECTION ====================
+
+  const handleAvatarSelection = useCallback((baseType: AvatarBaseType, cosmetics?: Partial<AvatarCosmetics>) => {
+    const avatarProfile = createDefaultAvatar(baseType);
+
+    // Apply custom cosmetics if provided
+    if (cosmetics) {
+      avatarProfile.cosmetics = { ...avatarProfile.cosmetics, ...cosmetics };
+    }
+
+    setPlayerBot(prev => ({
+      ...prev,
+      avatarProfile
+    }));
+
+    setScreen('game');
   }, []);
 
   // ==================== MEMOIZED VALUES ====================
@@ -737,9 +762,23 @@ const MathBotArena: React.FC = () => {
     );
   }
 
+  // ==================== RENDER: AVATAR SELECTION ====================
+
+  if (screen === 'avatar-select') {
+    return (
+      <I18nProvider>
+        <AvatarSelection
+          onSelect={handleAvatarSelection}
+          onBack={() => setScreen('register')}
+        />
+      </I18nProvider>
+    );
+  }
+
   // ==================== RENDER: GAME (Main Interface) ====================
 
   return (
+    <I18nProvider>
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-2 sm:p-4">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
@@ -749,10 +788,22 @@ const MathBotArena: React.FC = () => {
           className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 shadow-2xl"
         >
           <div className="flex justify-between items-center flex-wrap gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-4xl font-bold mb-2">MathBot Arena</h1>
-              <p className="text-sm sm:text-base">Привет, {userData?.name}! 🎮</p>
-              <p className="text-xs text-purple-200 opacity-75">{BUILD_TAG}</p>
+            <div className="flex items-center gap-4">
+              {/* Mini Avatar */}
+              {playerBot.avatarProfile && (
+                <div className="flex-shrink-0">
+                  <AvatarView
+                    avatar={playerBot.avatarProfile}
+                    size="small"
+                    animate={true}
+                  />
+                </div>
+              )}
+              <div>
+                <h1 className="text-2xl sm:text-4xl font-bold mb-2">MathBot Arena</h1>
+                <p className="text-sm sm:text-base">Привет, {userData?.name}! 🎮</p>
+                <p className="text-xs text-purple-200 opacity-75">{BUILD_TAG}</p>
+              </div>
             </div>
 
             <div className="text-right">
@@ -819,7 +870,7 @@ const MathBotArena: React.FC = () => {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-4 sm:mb-6 flex-wrap">
-          {(['training', 'learning', 'pvp', 'statistics', 'guides', 'account'] as const).map(tab => (
+          {(['training', 'learning', 'pvp', 'skills', 'statistics', 'guides', 'account'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -833,6 +884,7 @@ const MathBotArena: React.FC = () => {
               {tab === 'training' && '⚔️ Тренировка'}
               {tab === 'learning' && '📚 Обучение'}
               {tab === 'pvp' && '🎮 PvP Арена'}
+              {tab === 'skills' && '✨ Навыки'}
               {tab === 'statistics' && '📊 Статистика'}
               {tab === 'guides' && '📖 Материалы'}
               {tab === 'account' && '👤 Профиль'}
@@ -1202,6 +1254,34 @@ const MathBotArena: React.FC = () => {
             </motion.div>
           )}
 
+          {/* Skills Tab */}
+          {activeTab === 'skills' && (
+            <motion.div
+              key="skills"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              {playerBot.avatarProfile ? (
+                <SkillsDashboard avatar={playerBot.avatarProfile} />
+              ) : (
+                <div className="bg-slate-800 rounded-lg p-8 text-center shadow-2xl">
+                  <Sparkles className="w-16 h-16 mx-auto mb-4 text-purple-400" />
+                  <h3 className="text-2xl font-bold mb-4">Сначала выберите аватар!</h3>
+                  <p className="text-gray-400 mb-6">
+                    Создайте своего героя, чтобы отслеживать навыки и прогресс
+                  </p>
+                  <button
+                    onClick={() => setScreen('avatar-select')}
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 px-8 py-4 rounded-lg font-bold hover:scale-105 transition-all"
+                  >
+                    ✨ Создать аватар
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          )}
+
           {/* PvP Arena Tab */}
           {activeTab === 'pvp' && (
             <motion.div
@@ -1327,6 +1407,17 @@ const MathBotArena: React.FC = () => {
                 Профиль
               </h2>
 
+              {/* Large Avatar Display */}
+              {playerBot.avatarProfile && (
+                <div className="flex justify-center mb-6">
+                  <AvatarView
+                    avatar={playerBot.avatarProfile}
+                    size="large"
+                    animate={true}
+                  />
+                </div>
+              )}
+
               <div className="space-y-3 sm:space-y-4">
                 <div className="bg-slate-700 rounded-lg p-4 sm:p-6">
                   <div className="text-gray-400 mb-1 text-sm">Имя:</div>
@@ -1440,6 +1531,7 @@ const MathBotArena: React.FC = () => {
         )}
       </AnimatePresence>
     </div>
+    </I18nProvider>
   );
 };
 
