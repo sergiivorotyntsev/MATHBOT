@@ -21,6 +21,7 @@ export interface Task {
   time?: number; // Лимит времени (секунды)
   xp?: number; // Награда XP
   hint?: string; // Подсказка
+  skillType?: SkillType; // Тип навыка (добавляется автоматически)
 }
 
 export interface TaskBank {
@@ -366,6 +367,40 @@ export const getRandomTask = (skill: SkillType, maxDifficulty: number = 6): Task
 export const getTasksByTopic = (skill: SkillType, topic: string): Task[] => {
   return taskBank[skill].filter(task => task.t === topic);
 };
+
+// Вспомогательная функция для PvP: получить случайную задачу по уровню сложности (любой тип)
+export const getTaskByDifficulty = (difficulty: number): Task => {
+  const allTasks: Task[] = [
+    ...arithmeticTasks,
+    ...geometryTasks,
+    ...logicTasks
+  ];
+
+  const tasksOfDifficulty = allTasks.filter(task => task.d === difficulty);
+
+  if (tasksOfDifficulty.length === 0) {
+    // Fallback: return any task if no tasks of this difficulty exist
+    return allTasks[Math.floor(Math.random() * allTasks.length)];
+  }
+
+  return tasksOfDifficulty[Math.floor(Math.random() * tasksOfDifficulty.length)];
+};
+
+// Добавим поле skillType к задачам для правильного определения типа в бою
+export const addSkillTypeToTasks = (): void => {
+  arithmeticTasks.forEach(task => {
+    (task as any).skillType = 'arithmetic';
+  });
+  geometryTasks.forEach(task => {
+    (task as any).skillType = 'geometry';
+  });
+  logicTasks.forEach(task => {
+    (task as any).skillType = 'logic';
+  });
+};
+
+// Инициализация типов задач
+addSkillTypeToTasks();
 
 console.log(`📚 Банк задач загружен: ${taskBankStats.total} задач`);
 console.log(`  ➕ Арифметика: ${taskBankStats.arithmetic}`);
