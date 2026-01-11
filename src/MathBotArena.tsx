@@ -29,6 +29,10 @@ import { AvatarProfile, AvatarBaseType, AvatarCosmetics, createDefaultAvatar } f
 import { AvatarSelection } from './avatar/AvatarSelection';
 import { AvatarView } from './avatar/AvatarView';
 import { SkillsDashboard } from './avatar/SkillsDashboard';
+import { LanguageSwitcher } from './components/LanguageSwitcher';
+import { calculateScore } from './scoring/scoring';
+import { calculateSkillGains, applySkillGains } from './skills/skillGain';
+import { applySkillDecay, getDecayWarning } from './skills/skillDecay';
 
 // ==================== TYPES ====================
 
@@ -320,6 +324,30 @@ const MathBotArena: React.FC = () => {
     }
   }, [userData, playerBot]);
 
+  // ==================== SKILL DECAY CHECK ====================
+
+  useEffect(() => {
+    // Check and apply skill decay on load if avatar exists
+    if (playerBot.avatarProfile && playerBot.avatarProfile.lastActiveAt > 0) {
+      const warning = getDecayWarning(playerBot.avatarProfile.lastActiveAt);
+
+      if (warning.willDecay && warning.currentDecayFactor > 0) {
+        // Apply decay
+        const decayedAvatar = applySkillDecay(playerBot.avatarProfile);
+        setPlayerBot(prev => ({
+          ...prev,
+          avatarProfile: decayedAvatar
+        }));
+
+        // Show warning modal
+        setShowModal({
+          type: 'info',
+          message: warning.message
+        });
+      }
+    }
+  }, []); // Run once on mount
+
   // ==================== APP VISIBILITY TRACKING (Anti-cheat) ====================
 
   useEffect(() => {
@@ -454,14 +482,18 @@ const MathBotArena: React.FC = () => {
 
     if (correct) {
       const newCombo = combo + 1;
-      const xpGained = calculateXPReward(
-        baseXP,
-        newCombo,
-        timeTaken,
-        currentTask.time || 45,
-        currentTask.d,
-        false // TODO: Check for active super skills
-      );
+
+      // New scoring system
+      const scoreBreakdown = calculateScore({
+        correct: true,
+        timeSpent: timeTaken,
+        timeLimit: currentTask.time || 45,
+        difficulty: currentTask.d,
+        combo: newCombo,
+        taskType: session.mode
+      });
+
+      const xpGained = scoreBreakdown.xpGained;
 
       setCombo(newCombo);
 
@@ -484,11 +516,29 @@ const MathBotArena: React.FC = () => {
           }
         };
 
+        // Apply skill gains to avatar if it exists
+        let updatedAvatarProfile = prev.avatarProfile;
+        if (updatedAvatarProfile && session.skillType) {
+          const skillGains = calculateSkillGains(
+            session.skillType,
+            xpGained,
+            true,
+            timeTaken,
+            currentTask.time || 45
+          );
+          updatedAvatarProfile = applySkillGains(
+            updatedAvatarProfile,
+            skillGains,
+            `Completed ${session.skillType} task`
+          );
+        }
+
         return {
           ...prev,
           xp: newTotalXP % 100, // XP within current level
           totalXP: newTotalXP,
           level: newLevel,
+          avatarProfile: updatedAvatarProfile,
           statistics: {
             ...prev.statistics,
             totalQuestions: prev.statistics.totalQuestions + 1,
@@ -806,11 +856,15 @@ const MathBotArena: React.FC = () => {
               </div>
             </div>
 
-            <div className="text-right">
-              <div className="bg-purple-700 px-4 py-2 rounded-lg font-bold mb-2" style={{ minHeight: '44px' }}>
-                {currentAgeCategory?.icon} {currentAgeCategory?.name}
+            <div className="flex items-center gap-3">
+              <LanguageSwitcher />
+
+              <div className="text-right">
+                <div className="bg-purple-700 px-4 py-2 rounded-lg font-bold mb-2" style={{ minHeight: '44px' }}>
+                  {currentAgeCategory?.icon} {currentAgeCategory?.name}
+                </div>
+                <div className="text-sm">{userData?.age} лет</div>
               </div>
-              <div className="text-sm">{userData?.age} лет</div>
             </div>
           </div>
         </motion.div>
