@@ -18,10 +18,12 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Trophy, Star, Clock, User, Settings, Flame, BookOpen, BarChart3, ArrowLeft, Lightbulb, Zap, Shield, Target } from 'lucide-react';
+import { Trophy, Star, Clock, User, Settings, Flame, BookOpen, BarChart3, ArrowLeft, Lightbulb, Swords } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { taskBank, Task, SkillType, getRandomTask } from './data/taskBank';
 import { methodologyGuides, getGuideByTopic } from './data/methodologyGuides';
+import { BattleArena } from './components/BattleArena';
+import { createBattleHero } from './battle/battleMechanics';
 
 // ==================== TYPES ====================
 
@@ -94,6 +96,10 @@ interface FeedbackData {
 }
 
 // ==================== CONSTANTS ====================
+
+// Build marker for debugging (updated when PvP wired: 2026-01-11)
+const BUILD_TAG = 'v2.0-PVP-WIRED';
+const BUILD_DATE = '2026-01-11';
 
 const AGE_CATEGORIES = {
   '6-7': { name: 'Юные Исследователи', icon: '🔬', questions: 10 },
@@ -275,8 +281,8 @@ const createInitialSession = (): SessionData => ({
 
 const MathBotArena: React.FC = () => {
   // State
-  const [screen, setScreen] = useState<'welcome' | 'register' | 'game'>('welcome');
-  const [activeTab, setActiveTab] = useState<'training' | 'learning' | 'statistics' | 'guides' | 'account'>('training');
+  const [screen, setScreen] = useState<'welcome' | 'register' | 'game' | 'pvp'>('welcome');
+  const [activeTab, setActiveTab] = useState<'training' | 'learning' | 'statistics' | 'guides' | 'account' | 'pvp'>('training');
   const [userData, setUserData] = useState<UserData | null>(null);
   const [playerBot, setPlayerBot] = useState<PlayerBot>(createInitialPlayerBot());
   const [session, setSession] = useState<SessionData>(createInitialSession());
@@ -746,6 +752,7 @@ const MathBotArena: React.FC = () => {
             <div>
               <h1 className="text-2xl sm:text-4xl font-bold mb-2">MathBot Arena</h1>
               <p className="text-sm sm:text-base">Привет, {userData?.name}! 🎮</p>
+              <p className="text-xs text-purple-200 opacity-75">{BUILD_TAG}</p>
             </div>
 
             <div className="text-right">
@@ -812,7 +819,7 @@ const MathBotArena: React.FC = () => {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-4 sm:mb-6 flex-wrap">
-          {(['training', 'learning', 'statistics', 'guides', 'account'] as const).map(tab => (
+          {(['training', 'learning', 'pvp', 'statistics', 'guides', 'account'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -825,6 +832,7 @@ const MathBotArena: React.FC = () => {
             >
               {tab === 'training' && '⚔️ Тренировка'}
               {tab === 'learning' && '📚 Обучение'}
+              {tab === 'pvp' && '🎮 PvP Арена'}
               {tab === 'statistics' && '📊 Статистика'}
               {tab === 'guides' && '📖 Материалы'}
               {tab === 'account' && '👤 Профиль'}
@@ -1191,6 +1199,118 @@ const MathBotArena: React.FC = () => {
                   </>
                 );
               })()}
+            </motion.div>
+          )}
+
+          {/* PvP Arena Tab */}
+          {activeTab === 'pvp' && (
+            <motion.div
+              key="pvp"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              {screen === 'pvp' ? (
+                <BattleArena
+                  hero={createBattleHero(
+                    userData?.name || 'Player',
+                    userData?.name || 'Player',
+                    'warrior', // Default archetype - can be made configurable later
+                    playerBot.level,
+                    {
+                      arithmetic: playerBot.statistics.skillStats.arithmetic.level,
+                      geometry: playerBot.statistics.skillStats.geometry.level,
+                      logic: playerBot.statistics.skillStats.logic.level,
+                    }
+                  )}
+                  rank={Math.floor(playerBot.totalXP / 10)} // Simple rank calculation
+                  ageCategory={
+                    (userData?.age || 0) >= 16 ? 'adult' :
+                    (userData?.age || 0) >= 12 ? 'teen' : 'child'
+                  }
+                  onBattleEnd={(rewards, stats) => {
+                    // Update player stats with battle rewards
+                    setPlayerBot(prev => ({
+                      ...prev,
+                      xp: prev.xp + rewards.xp,
+                      totalXP: prev.totalXP + rewards.xp,
+                      level: Math.floor(Math.log2((prev.totalXP + rewards.xp) / 100 + 1)) + 1,
+                    }));
+                    setScreen('game');
+                    setActiveTab('statistics');
+                  }}
+                  onExit={() => {
+                    setScreen('game');
+                  }}
+                />
+              ) : (
+                <div className="bg-gradient-to-br from-red-600 to-purple-600 rounded-lg p-6 sm:p-8 shadow-2xl">
+                  <div className="text-center">
+                    <motion.div
+                      animate={{ rotate: [0, 5, -5, 0] }}
+                      transition={{ repeat: Infinity, duration: 2 }}
+                      className="inline-block mb-6"
+                    >
+                      <Swords className="w-20 h-20 text-yellow-400" />
+                    </motion.div>
+
+                    <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+                      ⚔️ PvP Battle Arena
+                    </h2>
+
+                    <p className="text-lg mb-6 max-w-2xl mx-auto">
+                      Сражайся с реальными игроками в математических поединках! Отвечай на вопросы быстрее соперника и наноси урон.
+                    </p>
+
+                    <div className="bg-black/30 rounded-lg p-6 mb-6 max-w-xl mx-auto">
+                      <h3 className="text-xl font-bold mb-4">Твой боец:</h3>
+                      <div className="space-y-2 text-left">
+                        <div className="flex justify-between">
+                          <span className="text-gray-300">Имя:</span>
+                          <span className="font-bold">{userData?.name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-300">Уровень:</span>
+                          <span className="font-bold">Lv. {playerBot.level}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-300">Ранг:</span>
+                          <span className="font-bold">{Math.floor(playerBot.totalXP / 10)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-300">HP:</span>
+                          <span className="font-bold">{100 + (playerBot.level * 10)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-300">Навыки:</span>
+                          <span className="font-bold">
+                            Арифметика: {playerBot.statistics.skillStats.arithmetic.level} |
+                            Геометрия: {playerBot.statistics.skillStats.geometry.level} |
+                            Логика: {playerBot.statistics.skillStats.logic.level}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-yellow-500/20 border-2 border-yellow-500 rounded-lg p-4 mb-6 max-w-xl mx-auto">
+                      <p className="text-sm font-semibold">
+                        ⚠️ Внимание: Требуется запущенный сервер!
+                      </p>
+                      <p className="text-xs mt-2 text-gray-300">
+                        Убедитесь, что WebSocket сервер запущен на порту 3001
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => setScreen('pvp')}
+                      className="bg-gradient-to-r from-yellow-500 to-red-500 hover:from-yellow-600 hover:to-red-600 px-8 py-4 rounded-xl font-bold text-xl transition-all hover:scale-105 active:scale-95 shadow-2xl"
+                      style={{ minHeight: '44px' }}
+                    >
+                      🎮 Начать бой!
+                    </button>
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
 

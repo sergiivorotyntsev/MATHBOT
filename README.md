@@ -28,6 +28,10 @@
 - 🤖 **Система прогрессии героя** с логарифмическими уровнями
 - 📚 **Два режима**: Обучение (без таймера) и Тренировка (с комбо)
 - 📖 **Методические материалы** с подробными объяснениями
+- ⚔️ **PvP Arena** - сражайтесь с реальными игроками в математических поединках!
+- 🌐 **WebSocket Real-time** - мгновенные PvP батлы с matchmaking
+- 🏆 **ELO рейтинг** - 7 рангов от Bronze до Legend
+- 💥 **Боевая система** - критические удары, уклонения, блоки, ульты
 - 🔥 **Система комбо** для мотивации последовательных правильных ответов
 - 💾 **Автоматическое сохранение** прогресса в localStorage
 - 📱 **Адаптивный дизайн** для всех устройств (телефон, планшет, компьютер)
@@ -51,24 +55,80 @@
 git clone https://github.com/yourusername/mathbot-arena.git
 cd mathbot-arena
 
-# 2. Установите зависимости
+# 2. Установите зависимости для клиента
 npm install
 
-# 3. Запустите dev-сервер
+# 3. Установите зависимости для сервера (для PvP Arena)
+cd server
+npm install
+cd ..
+```
+
+### Запуск приложения
+
+#### Только основной режим (обучение и тренировки)
+
+```bash
+# Запустите клиент
 npm run dev
 
-# 4. Откройте в браузере
+# Откройте в браузере
 # http://localhost:3000
 ```
+
+#### С PvP Arena (требуется 2 терминала)
+
+**Терминал 1 - WebSocket сервер:**
+```bash
+cd server
+npm run dev
+```
+
+**Терминал 2 - Клиент:**
+```bash
+npm run dev
+```
+
+**Откройте в браузере:**
+- Окно 1: http://localhost:3000
+- Окно 2: http://localhost:3000 (режим инкогнито для 2-го игрока)
+
+**Тестирование PvP:**
+1. Зарегистрируйте героев в обоих окнах
+2. Перейдите на вкладку "🎮 PvP Арена"
+3. Нажмите "Начать бой!" в обоих окнах
+4. Система автоматически найдет матч и начнет бой!
 
 ### Доступные команды
 
 ```bash
-npm run dev        # Запуск dev-сервера
-npm run build      # Сборка для production
-npm run preview    # Предпросмотр production build
-npm run lint       # Проверка кода с ESLint
-npm run type-check # Проверка типов TypeScript
+# Клиент
+npm run dev         # Запуск Vite dev-сервера (порт 3000)
+npm run dev:server  # Запуск WebSocket сервера (порт 3001)
+npm run build       # Сборка для production
+npm run preview     # Предпросмотр production build
+npm run lint        # Проверка кода с ESLint
+npm run type-check  # Проверка типов TypeScript
+
+# Сервер (в папке server/)
+cd server
+npm run dev         # Запуск в режиме разработки
+npm run build       # Сборка TypeScript
+npm start           # Запуск production сервера
+```
+
+### Конфигурация
+
+Создайте файл `.env` в корне проекта (опционально):
+```env
+VITE_SERVER_URL=http://localhost:3001
+```
+
+Для сервера создайте `server/.env`:
+```env
+PORT=3001
+CLIENT_URL=http://localhost:3000
+NODE_ENV=development
 ```
 
 ---
@@ -78,21 +138,39 @@ npm run type-check # Проверка типов TypeScript
 ```
 mathbot-arena/
 ├── src/
+│   ├── battle/
+│   │   └── battleMechanics.ts    # PvP боевая система
+│   ├── components/
+│   │   └── BattleArena.tsx       # PvP UI компонент
+│   ├── hooks/
+│   │   └── useBattleSocket.ts    # WebSocket хук
 │   ├── data/
-│   │   ├── taskBank.ts          # 300+ задач
-│   │   └── methodologyGuides.ts # Методические материалы
-│   ├── MathBotArena.tsx         # Основной компонент
-│   ├── main.tsx                 # Точка входа
-│   └── index.css                # Глобальные стили
-├── public/                      # Статические файлы
-├── ARCHITECTURE.md              # Подробная документация
+│   │   ├── taskBank.ts           # 300+ задач
+│   │   ├── methodologyGuides.ts  # Методические материалы
+│   │   └── avatars.ts            # Система аватаров
+│   ├── MathBotArena.tsx          # Основной компонент
+│   ├── main.tsx                  # Точка входа
+│   └── index.css                 # Глобальные стили
+├── server/                       # WebSocket сервер для PvP
+│   ├── index.ts                  # Express + Socket.io
+│   ├── battleManager.ts          # Matchmaking и боевая логика
+│   ├── types.ts                  # Типы для сервера
+│   └── package.json              # Зависимости сервера
+├── public/                       # Статические файлы
+├── ARCHITECTURE.md               # Подробная документация
+├── PVP_ARENA_DESIGN.md           # Дизайн PvP системы
+├── QUICKSTART_PVP.md             # Гайд по запуску PvP
 ├── package.json
 ├── vite.config.ts
 ├── tsconfig.json
 └── tailwind.config.js
 ```
 
-Полная документация по архитектуре доступна в [ARCHITECTURE.md](./ARCHITECTURE.md).
+**Документация:**
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - Полная архитектура системы
+- [PVP_ARENA_DESIGN.md](./PVP_ARENA_DESIGN.md) - Детальный дизайн PvP Arena
+- [QUICKSTART_PVP.md](./QUICKSTART_PVP.md) - Быстрый старт для PvP
+- [server/README.md](./server/README.md) - Документация WebSocket сервера
 
 ---
 
