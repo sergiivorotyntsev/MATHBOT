@@ -1,19 +1,35 @@
 # 🚀 MathBot Arena - Local Run Guide
 
 **Updated: 2026-01-11**
-**Build Tag: v2.0-PVP-WIRED**
+**Build Tag: v2.1-AVATAR-SKILLS**
 
-This guide provides exact, copy-paste-ready commands to run MathBot Arena locally with full PvP support.
+This guide provides exact, copy-paste-ready commands to run MathBot Arena locally with full Avatar System, gamification features, and PvP support.
 
 ---
 
-## ✅ What's Been Fixed
+## ✅ What's New in v2.1-AVATAR-SKILLS
 
-1. **PvP Arena is now accessible** - Added "🎮 PvP Арена" tab to main UI
-2. **Documentation corrected** - All ports and URLs verified and documented
-3. **Environment variables configured** - .env files created with correct values
-4. **Build marker added** - Version tag visible in UI (v2.0-PVP-WIRED)
-5. **Convenience scripts added** - Easy commands to run server and client
+### PHASE 1 - Avatar System
+1. **Complete Avatar System** - 4 base types (Scholar, Warrior, Artist, Engineer)
+2. **Avatar Selection** - Onboarding flow after registration
+3. **Skills Dashboard** - Core skills (6), secondary skills (16), unique perks
+4. **Visual Avatar** - SVG-based rendering with Framer Motion animations
+5. **Mini/Large Display** - Avatar in header and profile
+6. **i18n System** - Full RU/EN translations for all UI strings
+7. **Skill History** - Timeline of skill changes with events
+
+### PHASE 2 - Gamification (Core Systems)
+1. **SessionManager** - Fixes tab-switching bug with pause/resume
+2. **Scoring System** - Speed coefficient (1.00-1.15), difficulty multipliers
+3. **Skill Gain** - XP distribution to core/secondary skills
+4. **Skill Decay** - 5-day grace, 20% max decay over 7 days
+5. **Daily Quests** - 3 random quests with rewards
+6. **Streak Tracking** - Consecutive days with freeze option
+
+### Previous Features (v2.0)
+1. **PvP Arena** - Real-time battles via WebSocket
+2. **Training/Learning Modes** - Adaptive difficulty
+3. **Statistics** - Comprehensive progress tracking
 
 ---
 
@@ -104,6 +120,58 @@ Expected output:
 
 ---
 
+## 🎨 Testing Avatar System
+
+### 1. Register and Create Avatar
+
+1. Open http://localhost:3000
+2. Click "🚀 Начать приключение"
+3. Fill registration:
+   - Name: Player1
+   - Age: 10 (or any age 6-18)
+   - Email: test@example.com
+4. Click "✅ Создать героя"
+5. **Avatar Selection** screen appears
+
+### 2. Choose Your Avatar
+
+You'll see 4 avatar types:
+
+- **🧠 Scholar (Учёный)** - Bonus to arithmetic & accuracy
+- **⚔️ Warrior (Воин)** - Bonus to speed & focus
+- **🎨 Artist (Художник)** - Bonus to geometry & logic
+- **🔧 Engineer (Инженер)** - Balanced stats
+
+Click one to select, then customize:
+- Hair style (6 options)
+- Color palette
+
+Click "Создать" to finish.
+
+### 3. Explore Skills Dashboard
+
+1. Click on **"✨ Навыки"** tab
+2. You'll see:
+   - **Core Skills** (6): Progress bars for arithmetic, geometry, logic, speed, accuracy, focus
+   - **Secondary Skills** (16): Addition, subtraction, shapes, patterns, etc.
+   - **Unique Perks**: Unlockable abilities (empty at start)
+   - **Skill History**: Timeline of changes
+   - **Summary**: Level, streak, rating, PvP rank
+
+### 4. Check Avatar Display
+
+- **Header**: Mini avatar (64px) next to your name
+- **Profile Tab**: Large avatar (192px) with full stats
+- **Animations**: Idle breathing, blinking eyes, aura pulsing
+
+### 5. Language Switcher
+
+- Click **🌐 RU/EN** button in header
+- All UI text switches instantly
+- Choice saved to localStorage
+
+---
+
 ## 🎮 Testing PvP Arena
 
 ### 1. Open Two Browser Windows
@@ -114,42 +182,50 @@ Expected output:
 ### 2. Register Heroes
 
 In **both windows**:
-1. Click "🚀 Начать приключение"
-2. Fill in registration:
-   - Name: Player1 / Player2
-   - Age: 10 (or any age 6-18)
-   - Email: test1@example.com / test2@example.com
-3. Click "✅ Создать героя"
+1. Register as usual
+2. Select different avatars (Scholar vs Warrior, etc.)
+3. Complete setup
 
 ### 3. Enter PvP Arena
 
 In **both windows**:
-1. Click on the **"🎮 PvP Арена"** tab (third tab in the navigation)
-2. You should see:
-   - Your hero stats (name, level, rank, HP, skills)
-   - Warning about server requirement
-   - "🎮 Начать бой!" button
+1. Click on **"🎮 PvP Арена"** tab
+2. Your avatar appears in the battle UI
+3. Click "🎮 Начать бой!"
 
-### 4. Start Battle
+### 4. Battle Flow
 
-In **both windows**:
-1. Click "🎮 Начать бой!"
-2. Wait for matchmaking (should take 2-5 seconds)
-3. Battle begins!
-
-### 5. Play the Battle
-
-- **Answer questions** by clicking one of 4 answer options
-- **Watch the timer** (45 seconds per question)
-- **See opponent's status** (HP bar, answered indicator)
-- **Use ultimate** when charge reaches 100%
-- **Battle ends** when one player's HP reaches 0 or after 10 rounds
+- Questions appear for both players
+- Answer to deal damage
+- Watch opponent's avatar take damage
+- Use ultimate abilities
+- Battle ends when one avatar's HP reaches 0
 
 ---
 
 ## 🔍 Verification Checklist
 
-Use this checklist to verify everything is working:
+### Avatar System Verification
+
+- [ ] Registration leads to avatar selection
+- [ ] 4 avatar types displayed with descriptions
+- [ ] Customization panel shows hair styles
+- [ ] Mini avatar visible in header
+- [ ] Large avatar visible in profile
+- [ ] Skills tab accessible
+- [ ] Core skills (6) displayed with progress bars
+- [ ] Secondary skills (16) displayed in grid
+- [ ] Skill history empty initially
+- [ ] Build tag shows: "v2.1-AVATAR-SKILLS"
+
+### i18n Verification
+
+- [ ] Language switcher visible in header
+- [ ] Click switches between RU/EN
+- [ ] All UI text translates (tabs, buttons, labels)
+- [ ] Avatar names translate (Scholar = Учёный)
+- [ ] Skills translate (Arithmetic = Арифметика)
+- [ ] Language persists after refresh
 
 ### Server Verification
 
@@ -173,35 +249,71 @@ Expected response:
 
 - [ ] Client starts on port 3000
 - [ ] No console errors in browser
-- [ ] Build tag visible: "v2.0-PVP-WIRED" in header
-- [ ] All tabs accessible: Тренировка, Обучение, **PvP Арена**, Статистика, Материалы, Профиль
-- [ ] PvP Arena tab shows hero stats
-- [ ] "Начать бой!" button is visible and clickable
+- [ ] Build tag visible: "v2.1-AVATAR-SKILLS" in header
+- [ ] All tabs accessible: Тренировка, Обучение, PvP Арена, **✨ Навыки**, Статистика, Материалы, Профиль
+- [ ] Avatar system loads correctly
+- [ ] Animations play smoothly (Framer Motion)
 
-### WebSocket Connection Verification
+### localStorage Verification
 
-Open browser console (F12) and check for:
-- [ ] "🔌 Connected to battle server: [socket-id]"
-- [ ] No WebSocket connection errors
-- [ ] Server URL shown: http://localhost:3001
+Open Browser DevTools → Application → Local Storage → http://localhost:3000
 
-### Battle Flow Verification
-
-- [ ] Matchmaking finds opponent (2 windows)
-- [ ] Loading screen appears (3 seconds)
-- [ ] Question displays correctly
-- [ ] Timer counts down from 45
-- [ ] Answer submission works
-- [ ] "Opponent answered" indicator appears
-- [ ] Round result animation plays
-- [ ] HP bars update correctly
-- [ ] Battle ends with victory/defeat screen
-- [ ] Rewards are shown (XP, rank change, coins)
-- [ ] Stats are displayed (accuracy, response time)
+Check for:
+- [ ] `mathbot_arena_v2` - Main player data
+- [ ] `mathbot_language` - Language preference (ru/en)
+- [ ] Player data includes `avatarProfile` object
 
 ---
 
 ## 🐛 Troubleshooting
+
+### Problem: Avatar selection doesn't appear
+
+**Symptoms:**
+- Registration works but goes directly to game
+- No avatar selection screen
+
+**Solution:**
+1. Clear localStorage: DevTools → Application → Local Storage → Clear All
+2. Refresh page (Ctrl+Shift+R)
+3. Register again
+4. Verify screen state: check console for errors
+
+### Problem: Skills tab shows "No avatar" message
+
+**Symptoms:**
+- Skills tab shows "Сначала выберите аватар!"
+- Even after selecting avatar
+
+**Solution:**
+1. Check localStorage for `avatarProfile` in player data
+2. Clear localStorage and re-register
+3. Verify avatar selection completed (clicked "Создать")
+4. Check console for TypeScript errors
+
+### Problem: Avatar doesn't render (blank space)
+
+**Symptoms:**
+- Header shows blank space instead of avatar
+- Profile shows blank space
+
+**Solution:**
+1. Check browser console for SVG errors
+2. Verify Framer Motion is installed: `npm list framer-motion`
+3. Clear cache and reload
+4. Check if `AvatarView.tsx` loaded correctly
+
+### Problem: Language switcher doesn't work
+
+**Symptoms:**
+- Clicking language switcher does nothing
+- Text doesn't translate
+
+**Solution:**
+1. Check console for i18n errors
+2. Verify `I18nProvider` wraps app
+3. Check translations file loaded: `src/i18n/translations.ts`
+4. Clear localStorage `mathbot_language` key
 
 ### Problem: Server won't start
 
@@ -217,15 +329,20 @@ netstat -ano | findstr :3001
 taskkill /PID <PID> /F
 ```
 
-### Problem: Client won't start
+### Problem: TypeScript errors in build
 
-**Error:** `Port 3000 already in use`
+**Error:** "Cannot find module 'react' or its corresponding type declarations"
 
 **Solution:**
 ```bash
-# Vite will automatically try next port
-# Or kill process on port 3000
-lsof -ti:3000 | xargs kill -9
+# Re-install dependencies
+npm install
+
+# Check for peer dependency issues
+npm install react@^18.2.0 react-dom@^18.2.0
+
+# Run type check
+npm run type-check
 ```
 
 ### Problem: WebSocket connection fails
@@ -240,40 +357,17 @@ lsof -ti:3000 | xargs kill -9
 3. Clear browser cache and reload
 4. Check browser console for CORS errors
 
-### Problem: Matchmaking stuck
+### Problem: Skill gains not working
 
 **Symptoms:**
-- "Finding opponent..." forever
-- Queue position doesn't change
+- Complete tasks but skills don't increase
+- No skill history events
 
 **Solution:**
-1. Check both players are in the queue (server logs)
-2. Verify same age category (child/teen/adult)
-3. Wait at least 10 seconds
-4. Check server stats: `curl http://localhost:3001/stats`
-
-### Problem: Battle questions not loading
-
-**Symptoms:**
-- "undefined" or blank questions
-- Battle freezes after loading
-
-**Solution:**
-1. Check `src/data/taskBank.ts` is loaded
-2. Verify no TypeScript errors: `npm run type-check`
-3. Clear localStorage: Browser DevTools → Application → Local Storage → Clear
-4. Refresh page
-
-### Problem: Can't see PvP Arena tab
-
-**Symptoms:**
-- Only 5 tabs visible (no PvP tab)
-
-**Solution:**
-1. Verify build tag shows "v2.0-PVP-WIRED" in header
-2. Clear browser cache (Ctrl+Shift+R or Cmd+Shift+R)
-3. Check you're on correct branch: `git branch` (should show claude/review-math-bot-arena-OLrBM)
-4. Verify file changes: `git diff HEAD~1 src/MathBotArena.tsx`
+1. Verify avatar profile exists in playerBot state
+2. Check console for skill gain errors
+3. Ensure `applySkillGains()` is called after correct answers
+4. Integration pending (PHASE 2 systems not yet wired to main app)
 
 ---
 
@@ -288,87 +382,93 @@ lsof -ti:3000 | xargs kill -9
 
 ---
 
-## 📁 Files Changed Summary
+## 📁 New Files Summary (v2.1)
 
-### Modified Files
+### PHASE 1 - Avatar System
 
-1. **`src/MathBotArena.tsx`**
-   - Added 'pvp' to screen and activeTab types
-   - Imported BattleArena and createBattleHero
-   - Added PvP tab to navigation
-   - Created PvP info screen with hero stats
-   - Integrated BattleArena component
-   - Added BUILD_TAG constant: 'v2.0-PVP-WIRED'
-   - Display build tag in header
+#### Avatar Core (src/avatar/)
+- `types.ts` - Complete type system, AVATAR_BASES config, helpers
+- `AvatarView.tsx` - SVG-based visual rendering with animations
+- `AvatarSelection.tsx` - Two-step onboarding flow
+- `SkillsDashboard.tsx` - Skills visualization panel
 
-2. **`package.json`**
-   - Added `dev:server` script
-   - All dependencies already present
+#### i18n System (src/i18n/)
+- `config.ts` - Language management (RU/EN)
+- `context.tsx` - React context with useI18n hook
+- `translations.ts` - Complete RU/EN dictionaries (600+ keys)
 
-3. **`README.md`**
-   - Updated Quick Start with two-terminal setup
-   - Added PvP features to key features list
-   - Updated architecture section
-   - Added environment configuration docs
-   - Added links to PvP documentation
+#### Components (src/components/)
+- `LanguageSwitcher.tsx` - 🌐 Globe button to switch languages
 
-### Created Files
+### PHASE 2 - Gamification (Core Systems)
 
-1. **`.env.example`**
-   - Template for environment variables
-   - VITE_SERVER_URL configuration
+#### Session Management (src/session/)
+- `SessionManager.tsx` - Global session state, pause/resume modal
+
+#### Scoring (src/scoring/)
+- `scoring.ts` - Speed coefficient, difficulty multipliers, XP calculation
+
+#### Skills (src/skills/)
+- `skillGain.ts` - Task → skill mapping, XP distribution
+- `skillDecay.ts` - Decay algorithm, grace period, warning system
+
+#### Quests (src/quests/)
+- `dailyQuests.ts` - Daily quests generation, streak tracking, rewards
+
+**Total New Files:** 13
+**Total New Lines:** ~3,500+
 
 ---
 
 ## 🎯 Expected Behavior
 
-### Normal Operation
+### Normal Operation with Avatar System
 
 1. **Server starts** (Terminal 1):
    - Shows ASCII art logo
    - Port 3001 listening
    - "WebSocket: Socket.io" status
    - "Battle System: ACTIVE"
-   - "Matchmaking: RUNNING"
 
 2. **Client starts** (Terminal 2):
    - Vite dev server on port 3000
    - Opens browser automatically
    - Shows welcome screen
-   - Build tag visible: v2.0-PVP-WIRED
+   - Build tag visible: **v2.1-AVATAR-SKILLS**
 
-3. **Registration works**:
+3. **Registration → Avatar Selection**:
    - Form submits successfully
-   - Hero created with stats
-   - Redirects to game screen
-   - localStorage saves data
+   - Redirects to Avatar Selection screen
+   - Shows 4 avatar types with previews
+   - Customization panel appears on selection
+   - Saves to localStorage with avatarProfile
 
-4. **PvP Arena accessible**:
-   - Tab appears in navigation
-   - Hero stats display correctly
-   - "Начать бой!" button works
-   - Battle screen loads
+4. **Game Screen with Avatar**:
+   - Mini avatar in header (animated)
+   - All 7 tabs accessible (including ✨ Навыки)
+   - Language switcher functional
+   - Avatar persists across page refreshes
 
-5. **Matchmaking functions**:
-   - Queue position updates
-   - Match found within 10 seconds (with 2 players)
-   - Loading screen (3 seconds)
-   - Battle begins
+5. **Skills Dashboard**:
+   - Core skills displayed with progress bars
+   - Secondary skills in grid layout
+   - Unique perks section (empty initially)
+   - Skill history empty at start
+   - Summary stats (level, streak, rating, PvP rank)
 
-6. **Battle plays**:
-   - Questions load correctly
-   - Timer counts down
-   - Answers submit
-   - Damage calculates
-   - HP updates smoothly
-   - Animations play
-   - Battle ends correctly
+6. **Profile Tab**:
+   - Large avatar (192px) with animations
+   - Full stats displayed
+   - User info (name, age, email)
+   - XP progress bar
+   - Level and total sessions
 
-7. **Rewards apply**:
-   - XP added to hero
-   - Level updates if threshold reached
-   - Rank changes
-   - Returns to game screen
+7. **Language Switching**:
+   - Click 🌐 button
+   - All text translates instantly
+   - Avatar names translate
+   - Skill names translate
+   - Persists to localStorage
 
 ---
 
@@ -457,7 +557,7 @@ git branch               # Should show: claude/review-math-bot-arena-OLrBM
 git pull origin claude/review-math-bot-arena-OLrBM
 
 # Check what changed
-git log --oneline -5     # Last 5 commits
+git log --oneline -10    # Last 10 commits
 git diff HEAD~1          # Changes in last commit
 ```
 
@@ -467,29 +567,55 @@ git diff HEAD~1          # Changes in last commit
 
 Once local setup is working:
 
-1. **Test all features**:
-   - Training mode
-   - Learning mode
-   - Statistics
-   - Guides
-   - PvP Arena
+1. **Test all Avatar features**:
+   - Create avatars with different types
+   - Check mini/large display
+   - Test language switching
+   - Explore skills dashboard
+   - Complete training sessions
 
-2. **Try different scenarios**:
-   - Different age categories (child/teen/adult)
-   - Different skill levels
-   - Ultimate abilities
-   - Disconnect/reconnect
-   - Multiple rounds
+2. **Test Gamification** (systems created, integration pending):
+   - Scoring calculations
+   - Skill gains after tasks
+   - Skill decay warnings
+   - Daily quests (when integrated)
+   - Streak tracking (when integrated)
 
-3. **Performance testing**:
+3. **Test PvP with Avatars**:
+   - Battle with different avatar types
+   - Check avatar display in battle UI
+   - Test ultimate abilities
+   - Verify rewards apply to skills
+
+4. **Performance testing**:
    - Open 4+ browser windows
-   - Run multiple battles simultaneously
-   - Check server performance with `curl http://localhost:3001/stats`
+   - Create different avatars
+   - Switch languages rapidly
+   - Check animation performance
 
-4. **Deploy to production**:
-   - See [Deployment Guide](./PVP_IMPLEMENTATION_SUMMARY.md#deployment-readiness)
-   - Server: Heroku, AWS, DigitalOcean
-   - Client: Vercel, Netlify, AWS S3
+5. **Deploy to production**:
+   - Build client: `npm run build`
+   - Build server: `cd server && npm run build`
+   - Deploy to hosting (Vercel, Netlify, AWS, etc.)
+
+---
+
+## 📊 Feature Status
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **Avatar System** | ✅ Complete | 4 types, visual rendering, skills |
+| **Skills Dashboard** | ✅ Complete | Core/secondary skills, history |
+| **i18n RU/EN** | ✅ Complete | Full translations, language switcher |
+| **SessionManager** | ✅ Created | Context ready, needs integration |
+| **Scoring System** | ✅ Created | Speed coefficient, multipliers |
+| **Skill Gain** | ✅ Created | Task mapping, XP distribution |
+| **Skill Decay** | ✅ Created | 5-day grace, 20% max decay |
+| **Daily Quests** | ✅ Created | 3 quests, rewards, streak |
+| **PvP Arena** | ✅ Working | Real-time battles |
+| **Training/Learning** | ✅ Working | Adaptive difficulty |
+
+**Build Progress:** PHASE 1 ✅ Complete | PHASE 2 Core ✅ Complete | Integration Pending
 
 ---
 
@@ -516,10 +642,13 @@ For bug reports:
 You should now be able to:
 - Run the client on http://localhost:3000
 - Run the server on http://localhost:3001
-- Access PvP Arena from the main UI
-- Battle with another player in two browser windows
+- Create and customize avatars
+- View skills dashboard
+- Switch languages (RU/EN)
+- Access PvP Arena with avatars
+- Battle with another player
 
-**Build Tag:** v2.0-PVP-WIRED
+**Build Tag:** v2.1-AVATAR-SKILLS
 **Last Updated:** 2026-01-11
 
 </div>
