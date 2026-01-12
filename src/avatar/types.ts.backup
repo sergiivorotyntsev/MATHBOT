@@ -1,10 +1,7 @@
 /**
- * 🎨 Avatar System - Core Types (v3.0 - GAME STATS UPDATE)
- * Unified avatar system with RPG-style game stats and math skills
+ * 🎨 Avatar System - Core Types
+ * Unified avatar system for main game and PvP
  */
-
-import { GameStats, createDefaultGameStats } from '../types/gameStats';
-import { MathSkills, createDefaultMathSkills } from '../types/mathSkills';
 
 // ==================== BASE TYPES ====================
 
@@ -18,13 +15,59 @@ export interface AvatarCosmetics {
   colorPalette: 'default' | 'warm' | 'cool' | 'neon' | 'pastel' | 'dark';
 }
 
-// ==================== NEW SYSTEM ====================
+// ==================== SKILLS ====================
 
-// Export types from new system
-export type { GameStats } from '../types/gameStats';
-export type { MathSkills, MathSkillKey } from '../types/mathSkills';
+export interface CoreSkills {
+  arithmetic: number;    // 1-100
+  geometry: number;      // 1-100
+  logic: number;         // 1-100
+  speed: number;         // 1-100
+  accuracy: number;      // 1-100
+  focus: number;         // 1-100
+}
 
-// ==================== PERKS ====================
+export interface SecondarySkills {
+  // Arithmetic sub-skills
+  addition: number;
+  subtraction: number;
+  multiplication: number;
+  division: number;
+  fractions: number;
+  decimals: number;
+  percentages: number;
+
+  // Geometry sub-skills
+  shapes: number;
+  perimeter: number;
+  area: number;
+  volume: number;
+  angles: number;
+
+  // Logic sub-skills
+  patterns: number;
+  sequences: number;
+  problemSolving: number;
+  wordProblems: number;
+}
+
+export const SECONDARY_SKILL_NAMES: Record<keyof SecondarySkills, string> = {
+  addition: 'Сложение',
+  subtraction: 'Вычитание',
+  multiplication: 'Умножение',
+  division: 'Деление',
+  fractions: 'Дроби',
+  decimals: 'Десятичные',
+  percentages: 'Проценты',
+  shapes: 'Фигуры',
+  perimeter: 'Периметр',
+  area: 'Площадь',
+  volume: 'Объём',
+  angles: 'Углы',
+  patterns: 'Паттерны',
+  sequences: 'Последовательности',
+  problemSolving: 'Решение задач',
+  wordProblems: 'Текстовые задачи'
+};
 
 export interface UniquePerk {
   id: string;
@@ -46,12 +89,8 @@ export interface AvatarProfile {
   baseType: AvatarBaseType;
   cosmetics: AvatarCosmetics;
 
-  // NEW: Game stats (RPG-style battle stats)
-  gameStats: GameStats;
-
-  // NEW: Math skills (school topics)
-  mathSkills: MathSkills;
-
+  coreSkills: CoreSkills;
+  secondarySkills: SecondarySkills;
   uniquePerks: UniquePerk[];
 
   // Progression tracking
@@ -78,9 +117,8 @@ export interface AvatarProfile {
 
 export interface SkillChangeEvent {
   timestamp: number;
-  skill: string; // Can be game stat or math skill
+  skill: keyof CoreSkills | keyof SecondarySkills;
   change: number;
-  newValue?: number; // For display
   reason: 'training' | 'decay' | 'bonus' | 'penalty';
   details?: string;
 }
@@ -92,7 +130,7 @@ export interface AvatarBaseConfig {
   name: { en: string; ru: string };
   description: { en: string; ru: string };
   startingBonuses: {
-    gameStat: keyof GameStats;
+    coreSkill: keyof CoreSkills;
     value: number;
   }[];
   ultimateAbility: {
@@ -114,12 +152,12 @@ export const AVATAR_BASES: Record<AvatarBaseType, AvatarBaseConfig> = {
     type: 'scholar',
     name: { en: 'Scholar', ru: 'Учёный' },
     description: {
-      en: 'Master of knowledge and calculation. Excels in wisdom and focus.',
-      ru: 'Мастер знаний и вычислений. Превосходен в мудрости и концентрации.'
+      en: 'Master of knowledge and calculation. Excels in accuracy and logic.',
+      ru: 'Мастер знаний и вычислений. Превосходен в точности и логике.'
     },
     startingBonuses: [
-      { gameStat: 'wisdom', value: 15 },
-      { gameStat: 'focus', value: 10 },
+      { coreSkill: 'arithmetic', value: 10 },
+      { coreSkill: 'accuracy', value: 15 },
     ],
     ultimateAbility: {
       name: { en: 'Perfect Calculation', ru: 'Идеальный расчёт' },
@@ -142,12 +180,12 @@ export const AVATAR_BASES: Record<AvatarBaseType, AvatarBaseConfig> = {
     type: 'warrior',
     name: { en: 'Warrior', ru: 'Воин' },
     description: {
-      en: 'Fast and fierce. Excels in strength and agility.',
-      ru: 'Быстрый и яростный. Превосходен в силе и ловкости.'
+      en: 'Fast and fierce. Excels in speed and decisive action.',
+      ru: 'Быстрый и яростный. Превосходен в скорости и решительности.'
     },
     startingBonuses: [
-      { gameStat: 'strength', value: 15 },
-      { gameStat: 'agility', value: 10 },
+      { coreSkill: 'speed', value: 20 },
+      { coreSkill: 'focus', value: 10 },
     ],
     ultimateAbility: {
       name: { en: 'Lightning Strike', ru: 'Молниеносный удар' },
@@ -170,12 +208,12 @@ export const AVATAR_BASES: Record<AvatarBaseType, AvatarBaseConfig> = {
     type: 'artist',
     name: { en: 'Artist', ru: 'Художник' },
     description: {
-      en: 'Creative and intuitive. Excels in magic and defense.',
-      ru: 'Творческий и интуитивный. Превосходен в магии и защите.'
+      en: 'Creative and intuitive. Excels in geometry and visual thinking.',
+      ru: 'Творческий и интуитивный. Превосходен в геометрии и визуальном мышлении.'
     },
     startingBonuses: [
-      { gameStat: 'magic', value: 15 },
-      { gameStat: 'defense', value: 10 },
+      { coreSkill: 'geometry', value: 15 },
+      { coreSkill: 'logic', value: 10 },
     ],
     ultimateAbility: {
       name: { en: 'Spatial Vision', ru: 'Пространственное видение' },
@@ -198,13 +236,13 @@ export const AVATAR_BASES: Record<AvatarBaseType, AvatarBaseConfig> = {
     type: 'engineer',
     name: { en: 'Engineer', ru: 'Инженер' },
     description: {
-      en: 'Methodical and precise. Balanced with strong defense.',
-      ru: 'Методичный и точный. Сбалансирован с сильной защитой.'
+      en: 'Methodical and precise. Balanced in all skills with defensive focus.',
+      ru: 'Методичный и точный. Сбалансирован во всех навыках с фокусом на защите.'
     },
     startingBonuses: [
-      { gameStat: 'defense', value: 15 },
-      { gameStat: 'focus', value: 10 },
-      { gameStat: 'wisdom', value: 5 },
+      { coreSkill: 'arithmetic', value: 8 },
+      { coreSkill: 'geometry', value: 8 },
+      { coreSkill: 'focus', value: 12 },
     ],
     ultimateAbility: {
       name: { en: 'Calculation Engine', ru: 'Вычислительный двигатель' },
@@ -347,13 +385,40 @@ export const COSMETICS_CATALOG: CosmeticItem[] = [
 export function createDefaultAvatar(baseType: AvatarBaseType): AvatarProfile {
   const baseConfig = AVATAR_BASES[baseType];
 
-  // Initialize game stats with defaults
-  const gameStats = createDefaultGameStats();
+  // Initialize core skills with base values + bonuses
+  const coreSkills: CoreSkills = {
+    arithmetic: 10,
+    geometry: 10,
+    logic: 10,
+    speed: 10,
+    accuracy: 10,
+    focus: 10
+  };
 
   // Apply starting bonuses
   baseConfig.startingBonuses.forEach(bonus => {
-    gameStats[bonus.gameStat] += bonus.value;
+    coreSkills[bonus.coreSkill] += bonus.value;
   });
+
+  // Initialize secondary skills
+  const secondarySkills: SecondarySkills = {
+    addition: 0,
+    subtraction: 0,
+    multiplication: 0,
+    division: 0,
+    fractions: 0,
+    decimals: 0,
+    percentages: 0,
+    shapes: 0,
+    perimeter: 0,
+    area: 0,
+    volume: 0,
+    angles: 0,
+    patterns: 0,
+    sequences: 0,
+    problemSolving: 0,
+    wordProblems: 0
+  };
 
   return {
     baseType,
@@ -364,8 +429,8 @@ export function createDefaultAvatar(baseType: AvatarBaseType): AvatarProfile {
       accessory: 'none',
       colorPalette: 'default'
     },
-    gameStats,
-    mathSkills: createDefaultMathSkills(),
+    coreSkills,
+    secondarySkills,
     uniquePerks: [],
     totalXP: 0,
     level: 1,
@@ -402,4 +467,4 @@ export function getRarityColor(rarity: 'common' | 'rare' | 'epic' | 'legendary')
   }
 }
 
-console.log('🎨 Avatar System loaded (v3.0 - Game Stats Update)');
+console.log('🎨 Avatar System loaded');
