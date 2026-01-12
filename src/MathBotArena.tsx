@@ -24,7 +24,7 @@ import { taskBank, Task, SkillType } from './data/taskBank';
 import { getTasksForTraining } from './data/taskProvider';
 import { methodologyGuides, getGuideByTopic } from './data/methodologyGuides';
 import { LocalBotBattle } from './components/LocalBotBattle';
-import { I18nProvider, useI18n } from './i18n/context';
+import { useI18n } from './i18n/context';
 import { AvatarProfile, AvatarBaseType, AvatarCosmetics, createDefaultAvatar } from './avatar/types';
 import { AvatarSelection } from './avatar/AvatarSelection';
 import { AvatarView } from './avatar/AvatarView';
@@ -888,19 +888,16 @@ const MathBotArena: React.FC = () => {
 
   if (screen === 'avatar-select') {
     return (
-      <I18nProvider>
-        <AvatarSelection
-          onSelect={handleAvatarSelection}
-          onBack={() => setScreen('register')}
-        />
-      </I18nProvider>
+      <AvatarSelection
+        onSelect={handleAvatarSelection}
+        onBack={() => setScreen('register')}
+      />
     );
   }
 
   // ==================== RENDER: GAME (Main Interface) ====================
 
   return (
-    <I18nProvider>
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-2 sm:p-4">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
@@ -1513,7 +1510,6 @@ const MathBotArena: React.FC = () => {
         )}
       </AnimatePresence>
     </div>
-    </I18nProvider>
   );
 };
 
