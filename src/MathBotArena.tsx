@@ -34,11 +34,22 @@ import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { PlayerHeader } from './components/PlayerHeader';
 import { EditableProfile } from './components/EditableProfile';
 import { TrainingDashboard } from './components/TrainingDashboard';
+import { GamificationWidget } from './components/GamificationWidget';
+import { AchievementNotification } from './components/AchievementNotification';
+import { RewardSummary } from './components/RewardSummary';
 import { calculateScore } from './scoring/scoring';
 import { calculateSkillGains, applySkillGains } from './skills/skillGain';
 import { applySkillDecay, getDecayWarning } from './skills/skillDecay';
 import { safelyMigrateProfile } from './utils/dataMigration';
 import { MathSkillKey, MATH_SKILL_NAMES } from './types/mathSkills';
+import {
+  GamificationData,
+  Achievement,
+  createInitialGamificationData,
+  updateDailyGoal,
+  updateStreak,
+  checkAchievements
+} from './types/gamification';
 
 // ==================== TYPES ====================
 
@@ -84,6 +95,7 @@ interface PlayerBot {
   totalXP: number;
   statistics: Statistics;
   avatarProfile?: AvatarProfile; // Avatar system integration
+  gamification?: GamificationData; // Gamification system
 }
 
 interface SessionData {
@@ -290,7 +302,8 @@ const createInitialPlayerBot = (name: string = 'MathBot-X'): PlayerBot => ({
       geometry: { total: 0, correct: 0, errorTopics: [], level: 1, xp: 0, masteryPoints: 0, superSkills: [...SUPER_SKILLS.geometry] },
       logic: { total: 0, correct: 0, errorTopics: [], level: 1, xp: 0, masteryPoints: 0, superSkills: [...SUPER_SKILLS.logic] },
     }
-  }
+  },
+  gamification: createInitialGamificationData()
 });
 
 const createInitialSession = (): SessionData => ({
@@ -327,6 +340,11 @@ const MathBotArena: React.FC = () => {
   const [showModal, setShowModal] = useState<{ type: 'success' | 'info' | 'error'; message: string } | null>(null);
   const [answerStartTime, setAnswerStartTime] = useState<number>(0);
 
+  // Gamification state
+  const [newAchievement, setNewAchievement] = useState<Achievement | null>(null);
+  const [showRewardSummary, setShowRewardSummary] = useState(false);
+  const [sessionRewards, setSessionRewards] = useState<any>(null);
+
   // ==================== LOAD FROM STORAGE ====================
 
   useEffect(() => {
@@ -337,6 +355,10 @@ const MathBotArena: React.FC = () => {
         // Apply data migration for avatar profile (v2 -> v3)
         if (saved.playerBot.avatarProfile) {
           saved.playerBot.avatarProfile = safelyMigrateProfile(saved.playerBot.avatarProfile);
+        }
+        // Initialize gamification if it doesn't exist (migration)
+        if (!saved.playerBot.gamification) {
+          saved.playerBot.gamification = createInitialGamificationData();
         }
         setPlayerBot(saved.playerBot);
       }
@@ -686,30 +708,79 @@ const MathBotArena: React.FC = () => {
   const finishSession = useCallback(() => {
     const score = (session.correct / session.totalQ) * 100;
     const playTime = Math.floor((Date.now() - session.startedAt) / 1000);
+    const oldLevel = playerBot.level;
 
-    // Update statistics (✅ immutably)
-    setPlayerBot(prev => ({
-      ...prev,
-      statistics: {
-        ...prev.statistics,
-        sessions: prev.statistics.sessions + 1,
-        totalPlayTime: prev.statistics.totalPlayTime + playTime,
+    // Calculate XP gained
+    const xpGained = session.correct * 10 + Math.max(0, combo * 5);
+
+    // Update bot stats and gamification
+    setPlayerBot(prev => {
+      const newTotalXP = prev.totalXP + xpGained;
+      const newLevel = calculateLevel(newTotalXP);
+      const leveledUp = newLevel > oldLevel;
+
+      // Update gamification
+      let updatedGamification = prev.gamification || createInitialGamificationData();
+
+      // Update daily goal
+      updatedGamification = updateDailyGoal(updatedGamification, session.correct);
+
+      // Update streak
+      updatedGamification = updateStreak(updatedGamification);
+
+      // Check achievements
+      const achievementCheck = checkAchievements(updatedGamification, {
+        totalQuestions: prev.statistics.totalQuestions + session.totalQ,
+        correctAnswers: prev.statistics.correctAnswers + session.correct,
         bestCombo: Math.max(prev.statistics.bestCombo, combo),
-      }
-    }));
+        streak: updatedGamification.streak.current
+      });
 
-    // Show completion modal
-    setShowModal({
-      type: 'success',
-      message: `🎯 Сессия завершена!\n\n📊 Результат: ${session.correct}/${session.totalQ} (${score.toFixed(0)}%)\n🔥 Лучшее комбо: x${combo}\n⏱️ Время: ${Math.floor(playTime / 60)}м ${playTime % 60}с${session.suspiciousActivity ? '\n⚠️ Обнаружена подозрительная активность' : ''}`
+      // Show first achievement notification if any unlocked
+      if (achievementCheck.newUnlocked.length > 0) {
+        setNewAchievement(achievementCheck.newUnlocked[0]);
+      }
+
+      // Prepare reward summary data
+      setSessionRewards({
+        xpGained,
+        coinsGained: achievementCheck.newUnlocked.length * 10,
+        questionsAnswered: session.totalQ,
+        correctAnswers: session.correct,
+        accuracy: score,
+        comboMax: combo,
+        leveledUp,
+        newLevel: leveledUp ? newLevel : undefined,
+        dailyGoalProgress: (updatedGamification.dailyGoal.completed / updatedGamification.dailyGoal.target) * 100,
+        dailyGoalComplete: updatedGamification.dailyGoal.isComplete,
+        streakUpdated: updatedGamification.streak.current > 0,
+        newStreak: updatedGamification.streak.current,
+        achievementsUnlocked: achievementCheck.newUnlocked
+      });
+
+      return {
+        ...prev,
+        totalXP: newTotalXP,
+        level: newLevel,
+        gamification: achievementCheck.gamification,
+        statistics: {
+          ...prev.statistics,
+          sessions: prev.statistics.sessions + 1,
+          totalPlayTime: prev.statistics.totalPlayTime + playTime,
+          bestCombo: Math.max(prev.statistics.bestCombo, combo),
+        }
+      };
     });
+
+    // Show reward summary
+    setShowRewardSummary(true);
 
     // Reset session
     setSession(createInitialSession());
     setCurrentTask(null);
     setCombo(0);
     setIsTimerActive(false);
-  }, [session, combo]);
+  }, [session, combo, playerBot.level]);
 
   // ==================== REGISTRATION ====================
 
@@ -975,6 +1046,13 @@ const MathBotArena: React.FC = () => {
           xpProgress={xpProgress}
           xpToNextLevel={xpToNextLevel}
         />
+
+        {/* Gamification Widget */}
+        {playerBot.gamification && !session.active && (
+          <div className="mb-4">
+            <GamificationWidget gamification={playerBot.gamification} />
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-2 mb-4 sm:mb-6 flex-wrap">
@@ -1391,6 +1469,25 @@ const MathBotArena: React.FC = () => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Achievement Notification */}
+      <AchievementNotification
+        achievement={newAchievement}
+        onDismiss={() => setNewAchievement(null)}
+        autoHideDuration={5000}
+      />
+
+      {/* Reward Summary Modal */}
+      {sessionRewards && (
+        <RewardSummary
+          isOpen={showRewardSummary}
+          onClose={() => {
+            setShowRewardSummary(false);
+            setSessionRewards(null);
+          }}
+          rewards={sessionRewards}
+        />
+      )}
 
       {/* Modal */}
       <AnimatePresence>
