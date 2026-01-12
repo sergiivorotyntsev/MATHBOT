@@ -1,234 +1,203 @@
 /**
- * ✨ Skill Gain System
+ * 📈 Skill Gain System v3.0 - GAME STATS UPDATE
  *
- * Maps tasks to avatar skills and distributes XP
- * Primary skill gets 70%, secondary skills get 30% total
+ * Calculates and applies skill gains based on:
+ * - Math topic practiced
+ * - XP earned
+ * - Difficulty level
+ * - Speed performance
+ *
+ * Uses skillWeights config to distribute gains across:
+ * - Math skills (topic proficiency)
+ * - Game stats (RPG battle stats)
  */
 
-import { AvatarProfile, CoreSkills, SecondarySkills } from '../avatar/types';
-import { SkillType } from '../data/taskBank';
+import { AvatarProfile, SkillChangeEvent } from '../avatar/types';
+import { MathSkillKey } from '../types/mathSkills';
+import { GameStats, applyStatChanges, clampStat } from '../types/gameStats';
+import { MathSkills, applySkillChanges, clampSkill } from '../types/mathSkills';
+import { calculateSkillGains as calcGainsFromWeights } from '../config/skillWeights';
 
 // ==================== TYPES ====================
 
-export interface SkillMapping {
-  primaryCoreSkill: keyof CoreSkills;
-  secondaryCoreSkills: Array<keyof CoreSkills>;
-  primarySecondarySkills: Array<keyof SecondarySkills>;
-  secondarySecondarySkills: Array<keyof SecondarySkills>;
-}
-
 export interface SkillGainResult {
-  coreSkillGains: Partial<Record<keyof CoreSkills, number>>;
-  secondarySkillGains: Partial<Record<keyof SecondarySkills, number>>;
-  totalXPDistributed: number;
+  mathSkills: Partial<MathSkills>;
+  gameStats: Partial<GameStats>;
 }
 
-// ==================== SKILL MAPPINGS ====================
+// ==================== CALCULATE SKILL GAINS ====================
 
 /**
- * Map task types to avatar skills
- * Each task type affects multiple skills with different weights
- */
-export const SKILL_MAPPINGS: Record<SkillType, SkillMapping> = {
-  arithmetic: {
-    primaryCoreSkill: 'arithmetic',
-    secondaryCoreSkills: ['speed', 'accuracy'],
-    primarySecondarySkills: ['addition', 'subtraction', 'multiplication', 'division'],
-    secondarySecondarySkills: ['concentration', 'timeManagement']
-  },
-  geometry: {
-    primaryCoreSkill: 'geometry',
-    secondaryCoreSkills: ['logic', 'accuracy'],
-    primarySecondarySkills: ['shapes', 'area', 'perimeter', 'angles'],
-    secondarySecondarySkills: ['problemSolving', 'concentration']
-  },
-  logic: {
-    primaryCoreSkill: 'logic',
-    secondaryCoreSkills: ['focus', 'accuracy'],
-    primarySecondarySkills: ['patterns', 'sequences', 'deduction', 'problemSolving'],
-    secondarySecondarySkills: ['concentration', 'timeManagement']
-  }
-};
-
-// ==================== DISTRIBUTION WEIGHTS ====================
-
-const PRIMARY_CORE_WEIGHT = 0.40;      // 40% to primary core skill
-const SECONDARY_CORE_WEIGHT = 0.15;    // 15% total to secondary core skills
-const PRIMARY_SECONDARY_WEIGHT = 0.30; // 30% total to primary secondary skills
-const SECONDARY_SECONDARY_WEIGHT = 0.15; // 15% total to secondary secondary skills
-
-// ==================== SKILL GAIN CALCULATION ====================
-
-/**
- * Calculate skill gains from completing a task
+ * Calculate skill gains for a completed task
+ *
+ * @param topic - The math topic being practiced
+ * @param xpEarned - XP earned from the task
+ * @param correct - Whether answer was correct
+ * @param timeSpent - Time spent on task (seconds)
+ * @param timeLimit - Time limit for task (seconds)
+ * @returns Object with mathSkills and gameStats gains
  */
 export function calculateSkillGains(
-  taskType: SkillType,
-  xpGained: number,
+  topic: MathSkillKey,
+  xpEarned: number,
   correct: boolean,
-  timeTaken: number,
-  timeLimit: number
+  timeSpent: number = 0,
+  timeLimit: number = 45
 ): SkillGainResult {
-  if (!correct || xpGained <= 0) {
-    return {
-      coreSkillGains: {},
-      secondarySkillGains: {},
-      totalXPDistributed: 0
-    };
+  if (!correct || xpEarned <= 0) {
+    return { mathSkills: {}, gameStats: {} };
   }
 
-  const mapping = SKILL_MAPPINGS[taskType];
-  const coreSkillGains: Partial<Record<keyof CoreSkills, number>> = {};
-  const secondarySkillGains: Partial<Record<keyof SecondarySkills, number>> = {};
+  // Calculate speed bonus (0-1)
+  const speedRatio = timeLimit > 0 ? Math.min(1, timeSpent / timeLimit) : 1;
+  const speedBonus = Math.max(0, 1 - speedRatio); // 0 = slow, 1 = instant
 
-  // Primary core skill (40%)
-  const primaryCoreXP = Math.floor(xpGained * PRIMARY_CORE_WEIGHT);
-  coreSkillGains[mapping.primaryCoreSkill] = primaryCoreXP;
+  // Estimate difficulty from XP (rough heuristic)
+  // baseXP=15, so ~15-25 = easy, ~25-40 = medium, ~40+ = hard
+  const estimatedDifficulty = Math.min(5, Math.max(1, Math.floor(xpEarned / 10)));
 
-  // Secondary core skills (15% total, divided equally)
-  const secondaryCoreXPEach = Math.floor(
-    (xpGained * SECONDARY_CORE_WEIGHT) / mapping.secondaryCoreSkills.length
+  // Use skillWeights to calculate gains
+  const gains = calcGainsFromWeights(
+    topic,
+    xpEarned,
+    estimatedDifficulty,
+    correct,
+    speedBonus
   );
-  mapping.secondaryCoreSkills.forEach(skill => {
-    coreSkillGains[skill] = (coreSkillGains[skill] || 0) + secondaryCoreXPEach;
-  });
 
-  // Speed skill bonus if answered quickly
-  if (timeTaken < timeLimit * 0.5) {
-    coreSkillGains.speed = (coreSkillGains.speed || 0) + Math.floor(xpGained * 0.05);
-  }
-
-  // Accuracy skill bonus (always, since correct answer)
-  coreSkillGains.accuracy = (coreSkillGains.accuracy || 0) + Math.floor(xpGained * 0.05);
-
-  // Focus skill bonus if no errors (would need combo tracking)
-  coreSkillGains.focus = (coreSkillGains.focus || 0) + Math.floor(xpGained * 0.03);
-
-  // Primary secondary skills (30% total, divided equally)
-  const primarySecondaryXPEach = Math.floor(
-    (xpGained * PRIMARY_SECONDARY_WEIGHT) / mapping.primarySecondarySkills.length
-  );
-  mapping.primarySecondarySkills.forEach(skill => {
-    secondarySkillGains[skill] = (secondarySkillGains[skill] || 0) + primarySecondaryXPEach;
-  });
-
-  // Secondary secondary skills (15% total, divided equally)
-  const secondarySecondaryXPEach = Math.floor(
-    (xpGained * SECONDARY_SECONDARY_WEIGHT) / mapping.secondarySecondarySkills.length
-  );
-  mapping.secondarySecondarySkills.forEach(skill => {
-    secondarySkillGains[skill] = (secondarySkillGains[skill] || 0) + secondarySecondaryXPEach;
-  });
-
-  // Calculate total distributed
-  const totalCoreXP = Object.values(coreSkillGains).reduce((sum, val) => sum + val, 0);
-  const totalSecondaryXP = Object.values(secondarySkillGains).reduce((sum, val) => sum + val, 0);
-
-  return {
-    coreSkillGains,
-    secondarySkillGains,
-    totalXPDistributed: totalCoreXP + totalSecondaryXP
-  };
+  return gains;
 }
 
 // ==================== APPLY SKILL GAINS ====================
 
 /**
  * Apply skill gains to avatar profile
- * Returns updated avatar profile with skill history events
+ *
+ * @param avatar - Current avatar profile
+ * @param gains - Skill gains to apply
+ * @param reason - Reason for skill change (for history)
+ * @returns Updated avatar profile
  */
 export function applySkillGains(
   avatar: AvatarProfile,
   gains: SkillGainResult,
-  reason: string = 'Completed task'
+  reason: string = 'training'
 ): AvatarProfile {
-  const updatedAvatar = { ...avatar };
-  const timestamp = Date.now();
+  const now = Date.now();
+  const skillHistory: SkillChangeEvent[] = [...avatar.skillHistory];
 
-  // Apply core skill gains
-  Object.entries(gains.coreSkillGains).forEach(([skill, xp]) => {
-    const skillKey = skill as keyof CoreSkills;
-    const currentValue = updatedAvatar.coreSkills[skillKey];
-    const newValue = Math.min(100, currentValue + Math.floor(xp / 10)); // Scale XP to skill points
+  // Apply math skill gains
+  const newMathSkills = applySkillChanges(avatar.mathSkills, gains.mathSkills);
 
-    if (newValue !== currentValue) {
-      updatedAvatar.coreSkills[skillKey] = newValue;
+  // Track math skill changes in history
+  for (const [skill, gain] of Object.entries(gains.mathSkills)) {
+    if (typeof gain === 'number' && gain !== 0) {
+      const oldValue = avatar.mathSkills[skill as MathSkillKey];
+      const newValue = newMathSkills[skill as MathSkillKey];
 
-      // Add to history
-      updatedAvatar.skillHistory.push({
-        skill: skillKey,
-        change: newValue - currentValue,
-        newValue,
-        timestamp,
-        reason
+      skillHistory.push({
+        timestamp: now,
+        skill: skill,
+        change: gain,
+        newValue: newValue,
+        reason: 'training',
+        details: reason
       });
     }
-  });
-
-  // Apply secondary skill gains
-  Object.entries(gains.secondarySkillGains).forEach(([skill, xp]) => {
-    const skillKey = skill as keyof SecondarySkills;
-    const currentValue = updatedAvatar.secondarySkills[skillKey];
-    const newValue = Math.min(100, currentValue + Math.floor(xp / 15)); // Scale XP to skill points
-
-    if (newValue !== currentValue) {
-      updatedAvatar.secondarySkills[skillKey] = newValue;
-
-      // Add to history
-      updatedAvatar.skillHistory.push({
-        skill: skillKey,
-        change: newValue - currentValue,
-        newValue,
-        timestamp,
-        reason
-      });
-    }
-  });
-
-  // Limit history to last 100 events
-  if (updatedAvatar.skillHistory.length > 100) {
-    updatedAvatar.skillHistory = updatedAvatar.skillHistory.slice(-100);
   }
 
-  // Update last training timestamp
-  updatedAvatar.lastTrainingAt = timestamp;
-  updatedAvatar.lastActiveAt = timestamp;
+  // Apply game stat gains
+  const newGameStats = applyStatChanges(avatar.gameStats, gains.gameStats);
 
-  return updatedAvatar;
+  // Track game stat changes in history
+  for (const [stat, gain] of Object.entries(gains.gameStats)) {
+    if (typeof gain === 'number' && gain !== 0) {
+      const oldValue = avatar.gameStats[stat as keyof GameStats];
+      const newValue = newGameStats[stat as keyof GameStats];
+
+      skillHistory.push({
+        timestamp: now,
+        skill: stat,
+        change: gain,
+        newValue: newValue,
+        reason: 'training',
+        details: reason
+      });
+    }
+  }
+
+  // Keep history manageable (last 100 events)
+  const trimmedHistory = skillHistory.slice(-100);
+
+  return {
+    ...avatar,
+    mathSkills: newMathSkills,
+    gameStats: newGameStats,
+    skillHistory: trimmedHistory,
+    lastTrainingAt: now,
+    lastActiveAt: now
+  };
 }
 
-// ==================== DETAILED BREAKDOWN ====================
+// ==================== HELPER FUNCTIONS ====================
 
 /**
- * Get a detailed breakdown of skill gains for UI display
+ * Get total skill progress (0-100%)
+ * Average of all math skills
  */
-export function formatSkillGainBreakdown(gains: SkillGainResult): string {
-  const lines: string[] = ['📈 Улучшение навыков:'];
+export function getTotalMathProgress(mathSkills: MathSkills): number {
+  const skills = Object.values(mathSkills);
+  if (skills.length === 0) return 0;
 
-  if (Object.keys(gains.coreSkillGains).length > 0) {
-    lines.push('\n🌟 Основные навыки:');
-    Object.entries(gains.coreSkillGains).forEach(([skill, xp]) => {
-      lines.push(`  ${skill}: +${Math.floor(xp / 10)} очков`);
-    });
-  }
+  const sum = skills.reduce((acc, val) => acc + (val || 0), 0);
+  const avg = sum / skills.length;
 
-  if (Object.keys(gains.secondarySkillGains).length > 0) {
-    lines.push('\n📚 Дополнительные навыки:');
-    Object.entries(gains.secondarySkillGains).forEach(([skill, xp]) => {
-      lines.push(`  ${skill}: +${Math.floor(xp / 15)} очков`);
-    });
-  }
-
-  return lines.join('\n');
+  return clampSkill(avg);
 }
 
-// ==================== EXPORTS ====================
+/**
+ * Get total game stats power (0-100%)
+ * Average of all game stats
+ */
+export function getTotalGamePower(gameStats: GameStats): number {
+  const stats = Object.values(gameStats);
+  if (stats.length === 0) return 0;
 
-export default {
-  calculateSkillGains,
-  applySkillGains,
-  formatSkillGainBreakdown,
-  SKILL_MAPPINGS
-};
+  const sum = stats.reduce((acc, val) => acc + (val || 0), 0);
+  const avg = sum / stats.length;
 
-console.log('✨ Skill gain system loaded');
+  return clampStat(avg);
+}
+
+/**
+ * Get skill level from skill value (0-100 → level 1-10)
+ */
+export function getSkillLevel(skillValue: number): number {
+  return Math.floor(clampSkill(skillValue) / 10) + 1;
+}
+
+/**
+ * Check if skill leveled up
+ */
+export function didSkillLevelUp(oldValue: number, newValue: number): boolean {
+  return getSkillLevel(newValue) > getSkillLevel(oldValue);
+}
+
+/**
+ * Format skill gains for display
+ */
+export function formatSkillGains(gains: SkillGainResult): string {
+  const mathGains = Object.entries(gains.mathSkills)
+    .filter(([_, gain]) => (gain || 0) > 0)
+    .map(([skill, gain]) => `${skill}: +${gain?.toFixed(1)}`)
+    .join(', ');
+
+  const gameGains = Object.entries(gains.gameStats)
+    .filter(([_, gain]) => (gain || 0) > 0)
+    .map(([stat, gain]) => `${stat}: +${gain?.toFixed(1)}`)
+    .join(', ');
+
+  return `Math: ${mathGains || 'none'}\nStats: ${gameGains || 'none'}`;
+}
+
+console.log('📈 Skill Gain System v3.0 loaded (Game Stats Update)');
