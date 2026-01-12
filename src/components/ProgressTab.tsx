@@ -11,6 +11,7 @@ import { SkillType } from '../data/taskBank';
 import { useI18n } from '../i18n/context';
 import { MATH_SKILL_NAMES, MathSkillKey } from '../types/mathSkills';
 import { GAME_STAT_NAMES } from '../types/gameStats';
+import { MathSkillsPanel } from './MathSkillsPanel';
 
 interface SkillStats {
   total: number;
@@ -358,6 +359,15 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({
           </div>
         </motion.div>
       )}
+
+      {/* === BLOCK 4: REAL-TIME MATH SKILLS (New System) === */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <MathSkillsPanel onSkillClick={onMathSkillClick} />
+      </motion.div>
 
       {/* No Avatar Warning */}
       {!avatar && (
