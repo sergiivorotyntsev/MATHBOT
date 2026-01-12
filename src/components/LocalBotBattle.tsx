@@ -127,6 +127,7 @@ export const LocalBotBattle: React.FC<LocalBotBattleProps> = ({
 
     const correct = answer === currentTask.a;
 
+    // Phase 1: Player's turn
     if (correct) {
       setFeedback('✅ Правильно! Вы атакуете!');
       setBattleLog(prev => [`Раунд ${round}: ✅ Правильный ответ`, ...prev].slice(0, 5));
@@ -149,12 +150,19 @@ export const LocalBotBattle: React.FC<LocalBotBattleProps> = ({
     } else {
       setFeedback(`❌ Неверно! Правильный ответ: ${currentTask.a}`);
       setBattleLog(prev => [`Раунд ${round}: ❌ Ошибка`, ...prev].slice(0, 5));
+    }
 
-      // Bot's turn - simulated bot answer (80% chance of correctness based on level)
-      const botAnswersCorrectly = Math.random() < (0.5 + (bot.level * 0.03));
+    // Phase 2: Bot's turn (ALWAYS happens, making it truly turn-based)
+    // Simulate bot answering with accuracy based on level
+    const botAccuracy = 0.5 + (bot.level * 0.03);
+    const botAnswersCorrectly = Math.random() < botAccuracy;
 
+    // Delay bot's action to show it's a separate turn
+    setTimeout(() => {
       if (botAnswersCorrectly) {
         const botDamage = 15 + Math.floor(Math.random() * 10);
+        setBattleLog(prev => [t('botBattle.botAnsweredCorrect'), ...prev].slice(0, 5));
+
         setPlayerHP(prev => {
           const newHP = Math.max(0, prev - botDamage);
           if (newHP === 0) {
@@ -164,13 +172,14 @@ export const LocalBotBattle: React.FC<LocalBotBattleProps> = ({
           return newHP;
         });
 
-        setBattleLog(prev => [`Бот нанёс ${botDamage} урона!`, ...prev].slice(0, 5));
+        setBattleLog(prev => [`${t('botBattle.botDealt')} ${botDamage} ${t('botBattle.damage')}!`, ...prev].slice(0, 5));
       } else {
-        setBattleLog(prev => [`Бот промахнулся!`, ...prev].slice(0, 5));
+        setBattleLog(prev => [t('botBattle.botAnsweredWrong'), ...prev].slice(0, 5));
       }
-    }
 
-    setTimeout(() => nextRound(), 2500);
+      // Move to next round after both turns complete
+      setTimeout(() => nextRound(), 1500);
+    }, 1000);
   };
 
   // Next round

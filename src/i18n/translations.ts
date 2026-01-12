@@ -232,6 +232,8 @@ export interface Translations {
     battleLog: string;
     timeOut: string;
     botAttacks: string;
+    botAnsweredCorrect: string;
+    botAnsweredWrong: string;
     youAttack: string;
     correctAnswer: string;
     wrongAnswer: string;
@@ -515,6 +517,8 @@ export const translations: Record<Language, Translations> = {
       battleLog: '📜 Лог боя:',
       timeOut: '⏱️ Время вышло',
       botAttacks: 'Бот атакует!',
+      botAnsweredCorrect: 'Бот ответил правильно и атакует!',
+      botAnsweredWrong: 'Бот ответил неверно и промахнулся!',
       youAttack: 'Вы атакуете!',
       correctAnswer: '✅ Правильный ответ',
       wrongAnswer: '❌ Ошибка',
@@ -793,6 +797,8 @@ export const translations: Record<Language, Translations> = {
       battleLog: '📜 Battle Log:',
       timeOut: '⏱️ Time\'s Up',
       botAttacks: 'Bot attacks!',
+      botAnsweredCorrect: 'Bot answered correctly and attacks!',
+      botAnsweredWrong: 'Bot answered wrong and missed!',
       youAttack: 'You attack!',
       correctAnswer: '✅ Correct answer',
       wrongAnswer: '❌ Wrong',
