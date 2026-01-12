@@ -120,6 +120,14 @@ export interface Translations {
     speed: string;
     accuracy: string;
     focus: string;
+    // NEW: Game stats
+    strength: string;
+    agility: string;
+    defense: string;
+    magic: string;
+    wisdom: string;
+    luck: string;
+    // Math skills
     addition: string;
     subtraction: string;
     multiplication: string;
@@ -335,6 +343,14 @@ export const translations: Record<Language, Translations> = {
       speed: 'Скорость',
       accuracy: 'Точность',
       focus: 'Фокус',
+      // NEW: Game stats
+      strength: 'Сила',
+      agility: 'Ловкость',
+      defense: 'Броня',
+      magic: 'Магия',
+      wisdom: 'Мудрость',
+      luck: 'Удача',
+      // Math skills
       addition: 'Сложение',
       subtraction: 'Вычитание',
       multiplication: 'Умножение',
@@ -545,6 +561,14 @@ export const translations: Record<Language, Translations> = {
       speed: 'Speed',
       accuracy: 'Accuracy',
       focus: 'Focus',
+      // NEW: Game stats
+      strength: 'Strength',
+      agility: 'Agility',
+      defense: 'Defense',
+      magic: 'Magic',
+      wisdom: 'Wisdom',
+      luck: 'Luck',
+      // Math skills
       addition: 'Addition',
       subtraction: 'Subtraction',
       multiplication: 'Multiplication',

@@ -28,13 +28,11 @@ import { I18nProvider } from './i18n/context';
 import { AvatarProfile, AvatarBaseType, AvatarCosmetics, createDefaultAvatar } from './avatar/types';
 import { AvatarSelection } from './avatar/AvatarSelection';
 import { AvatarView } from './avatar/AvatarView';
-import { SkillsDashboard } from './avatar/SkillsDashboard.v3';
+import { SkillsDashboard } from './avatar/SkillsDashboard';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { calculateScore } from './scoring/scoring';
 import { calculateSkillGains, applySkillGains } from './skills/skillGain';
 import { applySkillDecay, getDecayWarning } from './skills/skillDecay';
-import { safelyMigrateProfile } from './utils/dataMigration';
-import { MathSkillKey } from './types/mathSkills';
 
 // ==================== TYPES ====================
 
@@ -211,40 +209,6 @@ const generateAnswerOptions = (correctAnswer: number): number[] => {
   return Array.from(options).sort(() => Math.random() - 0.5);
 };
 
-// ==================== TOPIC MAPPING ====================
-
-/**
- * Map task topic string to MathSkillKey
- * Handles Russian topic names from taskBank
- */
-const mapTopicToMathSkill = (topicString: string): MathSkillKey => {
-  const topicLower = topicString.toLowerCase();
-
-  // Arithmetic
-  if (topicLower.includes('сложен') || topicLower.includes('addition')) return 'addition';
-  if (topicLower.includes('вычита') || topicLower.includes('subtract')) return 'subtraction';
-  if (topicLower.includes('умнож') || topicLower.includes('multiply') || topicLower.includes('удвоен') || topicLower.includes('квадрат')) return 'multiplication';
-  if (topicLower.includes('делен') || topicLower.includes('divid')) return 'division';
-  if (topicLower.includes('дроб') || topicLower.includes('fraction')) return 'fractions';
-  if (topicLower.includes('десятичн') || topicLower.includes('decimal')) return 'decimals';
-  if (topicLower.includes('процент') || topicLower.includes('percent')) return 'percentages';
-
-  // Geometry
-  if (topicLower.includes('фигур') || topicLower.includes('shape')) return 'shapes';
-  if (topicLower.includes('периметр') || topicLower.includes('perimeter')) return 'perimeter';
-  if (topicLower.includes('площад') || topicLower.includes('area')) return 'area';
-  if (topicLower.includes('объём') || topicLower.includes('объем') || topicLower.includes('volume')) return 'volume';
-  if (topicLower.includes('угл') || topicLower.includes('angle')) return 'angles';
-
-  // Logic
-  if (topicLower.includes('паттерн') || topicLower.includes('pattern')) return 'patterns';
-  if (topicLower.includes('последовательн') || topicLower.includes('sequence') || topicLower.includes('прогресс')) return 'sequences';
-  if (topicLower.includes('задач') || topicLower.includes('problem')) return 'problemSolving';
-
-  // Fallback based on SkillType
-  return 'problemSolving'; // Default fallback
-};
-
 // ==================== LOCAL STORAGE ====================
 
 const STORAGE_KEY = 'mathbot_arena_v2';
@@ -325,13 +289,7 @@ const MathBotArena: React.FC = () => {
     const saved = loadFromLocalStorage();
     if (saved) {
       if (saved.userData) setUserData(saved.userData);
-      if (saved.playerBot) {
-        // Apply data migration for avatar profile (v2 -> v3)
-        if (saved.playerBot.avatarProfile) {
-          saved.playerBot.avatarProfile = safelyMigrateProfile(saved.playerBot.avatarProfile);
-        }
-        setPlayerBot(saved.playerBot);
-      }
+      if (saved.playerBot) setPlayerBot(saved.playerBot);
       if (saved.userData) setScreen('game');
     }
   }, []);
@@ -537,11 +495,9 @@ const MathBotArena: React.FC = () => {
 
         // Apply skill gains to avatar if it exists
         let updatedAvatarProfile = prev.avatarProfile;
-        if (updatedAvatarProfile && currentTask) {
-          // Map task topic to MathSkillKey
-          const mathSkill = mapTopicToMathSkill(currentTask.t);
+        if (updatedAvatarProfile && session.skillType) {
           const skillGains = calculateSkillGains(
-            mathSkill,
+            session.skillType,
             xpGained,
             true,
             timeTaken,
@@ -550,7 +506,7 @@ const MathBotArena: React.FC = () => {
           updatedAvatarProfile = applySkillGains(
             updatedAvatarProfile,
             skillGains,
-            `Completed ${currentTask.t} task`
+            `Completed ${session.skillType} task`
           );
         }
 
