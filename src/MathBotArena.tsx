@@ -24,7 +24,7 @@ import { taskBank, Task, SkillType } from './data/taskBank';
 import { getTasksForTraining } from './data/taskProvider';
 import { methodologyGuides, getGuideByTopic } from './data/methodologyGuides';
 import { LocalBotBattle } from './components/LocalBotBattle';
-import { I18nProvider } from './i18n/context';
+import { I18nProvider, useI18n } from './i18n/context';
 import { AvatarProfile, AvatarBaseType, AvatarCosmetics, createDefaultAvatar } from './avatar/types';
 import { AvatarSelection } from './avatar/AvatarSelection';
 import { AvatarView } from './avatar/AvatarView';
@@ -305,6 +305,9 @@ const createInitialSession = (): SessionData => ({
 // ==================== MAIN COMPONENT ====================
 
 const MathBotArena: React.FC = () => {
+  // i18n
+  const { t } = useI18n();
+
   // State
   const [screen, setScreen] = useState<'welcome' | 'register' | 'avatar-select' | 'game' | 'pvp'>('welcome');
   const [activeTab, setActiveTab] = useState<'training' | 'progress' | 'materials' | 'account' | 'pvp'>('training');
@@ -1002,11 +1005,11 @@ const MathBotArena: React.FC = () => {
               }`}
               style={{ minHeight: '44px' }} // ✅ Touch target
             >
-              {tab === 'training' && '⚔️ Тренировка'}
-              {tab === 'pvp' && '🎮 Бой с ботом'}
-              {tab === 'progress' && '📊 Прогресс'}
-              {tab === 'materials' && '📖 Материалы'}
-              {tab === 'account' && '👤 Профиль'}
+              {tab === 'training' && t('nav.training')}
+              {tab === 'pvp' && t('nav.botBattle')}
+              {tab === 'progress' && t('nav.progress')}
+              {tab === 'materials' && t('nav.materials')}
+              {tab === 'account' && t('nav.profile')}
             </button>
           ))}
         </div>
@@ -1023,10 +1026,10 @@ const MathBotArena: React.FC = () => {
             >
               <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 sm:p-6 mb-6 shadow-xl">
                 <h2 className="text-xl sm:text-2xl font-bold mb-2">
-                  ⚔️ Тренировочный режим
+                  {t('session.trainingMode')}
                 </h2>
                 <p className="text-sm sm:text-base">
-                  Проверь свои навыки! {currentAgeCategory?.questions} вопросов с таймером и комбо.
+                  {t('session.trainingDesc')}
                 </p>
               </div>
 
@@ -1048,18 +1051,18 @@ const MathBotArena: React.FC = () => {
                       <h3 className="text-xl sm:text-2xl font-bold mb-2">{skill.name}</h3>
 
                       <div className="text-yellow-400 mt-4 text-sm sm:text-base">
-                        {currentAgeCategory?.questions} задач • Ур. {stats.level}
+                        {currentAgeCategory?.questions} {t('taskUI.tasks')} • {t('taskUI.level')} {stats.level}
                       </div>
 
                       {stats.total > 0 && (
                         <div className="mt-3 text-xs sm:text-sm text-gray-400">
-                          Решено: {stats.total} | Точность: {accuracy.toFixed(0)}%
+                          {t('taskUI.solved')}: {stats.total} | {t('taskUI.accuracy')}: {accuracy.toFixed(0)}%
                         </div>
                       )}
 
                       {stats.errorTopics.length > 0 && (
                         <div className="mt-2 text-xs text-red-400">
-                          ⚠️ Требует внимания: {stats.errorTopics.slice(0, 2).join(', ')}
+                          {t('taskUI.needsAttention')}: {stats.errorTopics.slice(0, 2).join(', ')}
                         </div>
                       )}
                     </motion.button>
@@ -1081,7 +1084,7 @@ const MathBotArena: React.FC = () => {
               <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
                 <div className="flex items-center gap-4 flex-wrap">
                   <div className="text-lg sm:text-2xl font-bold">
-                    Вопрос {session.currentQ + 1}/{session.totalQ}
+                    {t('session.question')} {session.currentQ + 1} {t('session.of')} {session.totalQ}
                   </div>
 
                   {session.mode === 'training' && (
@@ -1096,22 +1099,22 @@ const MathBotArena: React.FC = () => {
 
                 <button
                   onClick={() => {
-                    if (confirm('⚠️ Остановить тренировку? Вы получите штраф -50 XP за досрочное завершение.')) {
+                    if (confirm(t('taskUI.confirmStop'))) {
                       stopSession();
                     }
                   }}
                   className="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-lg font-bold transition-all text-sm"
                   style={{ minHeight: '44px' }}
                 >
-                  ⏹️ Стоп
+                  {t('session.stop')}
                 </button>
               </div>
 
               {/* Question */}
               <div className={`bg-gradient-to-r ${SKILLS[session.skillType!].color} rounded-lg p-6 sm:p-8 mb-8 text-center shadow-xl`}>
                 <div className="text-2xl sm:text-4xl font-bold mb-4">{currentTask.q}</div>
-                <div className="text-xs sm:text-sm text-white/80">Тема: {currentTask.t}</div>
-                <div className="text-xs text-white/60 mt-1">Сложность: {'⭐'.repeat(currentTask.d)}</div>
+                <div className="text-xs sm:text-sm text-white/80">{t('taskUI.topic')}: {currentTask.t}</div>
+                <div className="text-xs text-white/60 mt-1">{t('taskUI.difficulty')}: {'⭐'.repeat(currentTask.d)}</div>
               </div>
 
               {/* Answer Options */}
@@ -1159,7 +1162,7 @@ const MathBotArena: React.FC = () => {
               {session.mode === 'learning' && currentTask.hint && !feedback && (
                 <div className="mt-4 p-4 bg-blue-900/30 rounded-lg text-center">
                   <Lightbulb className="w-5 h-5 inline mr-2" />
-                  <span className="text-sm">💡 Подсказка: {currentTask.hint}</span>
+                  <span className="text-sm">💡 {t('session.hint')}: {currentTask.hint}</span>
                 </div>
               )}
             </motion.div>
@@ -1196,11 +1199,11 @@ const MathBotArena: React.FC = () => {
             >
               <h2 className="text-2xl sm:text-3xl font-bold mb-6 flex items-center gap-3">
                 <BookOpen className="w-6 h-6 sm:w-8 sm:h-8" />
-                📚 База знаний - Материалы для обучения
+                {t('materials.title')}
               </h2>
 
               <p className="text-gray-300 mb-6">
-                Выберите тему для изучения теории, примеров и советов. После изучения нажмите "Тренировка" чтобы закрепить материал!
+                {t('materials.subtitle')}
               </p>
 
               <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
@@ -1356,36 +1359,36 @@ const MathBotArena: React.FC = () => {
                     </motion.div>
 
                     <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-                      🤖 Бой с ботом
+                      {t('botBattle.title')}
                     </h2>
 
                     <p className="text-lg mb-6 max-w-2xl mx-auto">
-                      Сражайся с AI-противником в математических поединках! Отвечай на вопросы правильно и наноси урон.
+                      {t('botBattle.description')}
                     </p>
 
                     <div className="bg-black/30 rounded-lg p-6 mb-6 max-w-xl mx-auto">
-                      <h3 className="text-xl font-bold mb-4">Твой боец:</h3>
+                      <h3 className="text-xl font-bold mb-4">{t('botBattle.yourFighter')}</h3>
                       <div className="space-y-2 text-left">
                         <div className="flex justify-between">
-                          <span className="text-gray-300">Имя:</span>
+                          <span className="text-gray-300">{t('botBattle.name')}:</span>
                           <span className="font-bold">{userData?.name}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-300">Уровень:</span>
+                          <span className="text-gray-300">{t('botBattle.levelLabel')}:</span>
                           <span className="font-bold">Lv. {playerBot.level}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-300">HP:</span>
+                          <span className="text-gray-300">{t('botBattle.hp')}:</span>
                           <span className="font-bold">{100 + (playerBot.level * 10)}</span>
                         </div>
                         {playerBot.avatarProfile && (
                           <>
                             <div className="flex justify-between">
-                              <span className="text-gray-300">Сила:</span>
+                              <span className="text-gray-300">{t('skills.strength')}:</span>
                               <span className="font-bold">{playerBot.avatarProfile.gameStats.strength}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-300">Ловкость:</span>
+                              <span className="text-gray-300">{t('skills.agility')}:</span>
                               <span className="font-bold">{playerBot.avatarProfile.gameStats.agility}</span>
                             </div>
                           </>
@@ -1395,10 +1398,10 @@ const MathBotArena: React.FC = () => {
 
                     <div className="bg-green-500/20 border-2 border-green-500 rounded-lg p-4 mb-6 max-w-xl mx-auto">
                       <p className="text-sm font-semibold">
-                        ✅ Локальный режим - сервер не требуется!
+                        {t('botBattle.localMode')}
                       </p>
                       <p className="text-xs mt-2 text-gray-300">
-                        Бой с AI-ботом работает полностью офлайн
+                        {t('botBattle.offlineInfo')}
                       </p>
                     </div>
 
@@ -1407,7 +1410,7 @@ const MathBotArena: React.FC = () => {
                       className="bg-gradient-to-r from-yellow-500 to-red-500 hover:from-yellow-600 hover:to-red-600 px-8 py-4 rounded-xl font-bold text-xl transition-all hover:scale-105 active:scale-95 shadow-2xl"
                       style={{ minHeight: '44px' }}
                     >
-                      🤖 Начать бой с ботом!
+                      {t('botBattle.startButton')}
                     </button>
                   </div>
                 </div>
@@ -1425,7 +1428,7 @@ const MathBotArena: React.FC = () => {
             >
               <h2 className="text-2xl sm:text-3xl font-bold mb-6 flex items-center gap-3">
                 <User className="w-6 h-6 sm:w-8 sm:h-8" />
-                Профиль
+                {t('nav.profile')}
               </h2>
 
               {/* Large Avatar Display */}

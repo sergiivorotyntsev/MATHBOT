@@ -50,6 +50,9 @@ export interface Translations {
     training: string;
     learning: string;
     pvp: string;
+    botBattle: string;
+    progress: string;
+    materials: string;
     skills: string;
     statistics: string;
     guides: string;
@@ -79,6 +82,8 @@ export interface Translations {
     pause: string;
     resume: string;
     quit: string;
+    stop: string;
+    skip: string;
     exitWarning: string;
     exitWarningDesc: string;
     exitPenalty: string;
@@ -99,6 +104,10 @@ export interface Translations {
     xpGained: string;
     skillsImproved: string;
     backToMenu: string;
+    showHint: string;
+    hint: string;
+    showExplanation: string;
+    explanation: string;
   };
 
   // Skills
@@ -203,6 +212,60 @@ export interface Translations {
     block: string;
   };
 
+  // Bot Battle (Local)
+  botBattle: {
+    title: string;
+    description: string;
+    startButton: string;
+    playerInfo: string;
+    yourFighter: string;
+    name: string;
+    levelLabel: string;
+    hp: string;
+    localMode: string;
+    offlineInfo: string;
+    exit: string;
+    exitConfirm: string;
+    exitWarning: string;
+    round: string;
+    solveToAttack: string;
+    battleLog: string;
+    timeOut: string;
+    botAttacks: string;
+    youAttack: string;
+    correctAnswer: string;
+    wrongAnswer: string;
+    botDealt: string;
+    youDealt: string;
+    damage: string;
+    botMissed: string;
+    aiOpponent: string;
+    won: string;
+    lost: string;
+    youDefeated: string;
+    defeated: string;
+  };
+
+  // Materials/Knowledge base
+  materials: {
+    title: string;
+    subtitle: string;
+    selectTopic: string;
+  };
+
+  // Task UI
+  taskUI: {
+    topic: string;
+    difficulty: string;
+    solved: string;
+    accuracy: string;
+    needsAttention: string;
+    level: string;
+    tasks: string;
+    confirmStop: string;
+    stopPenalty: string;
+  };
+
   // Common
   common: {
     save: string;
@@ -276,6 +339,9 @@ export const translations: Record<Language, Translations> = {
       training: '⚔️ Тренировка',
       learning: '📚 Обучение',
       pvp: '🎮 PvP Арена',
+      botBattle: '🎮 Бой с ботом',
+      progress: '📊 Прогресс',
+      materials: '📖 Материалы',
       skills: '✨ Навыки',
       statistics: '📊 Статистика',
       guides: '📖 Материалы',
@@ -303,6 +369,8 @@ export const translations: Record<Language, Translations> = {
       pause: 'Пауза',
       resume: 'Продолжить',
       quit: 'Выйти',
+      stop: '⏹️ Стоп',
+      skip: 'Пропустить',
       exitWarning: 'Выйти из сессии?',
       exitWarningDesc: 'Прогресс будет потерян, комбо сбросится.',
       exitPenalty: 'Потеря {xp} XP и сброс комбо',
@@ -322,7 +390,11 @@ export const translations: Record<Language, Translations> = {
       avgTime: 'Среднее время',
       xpGained: 'Получено XP',
       skillsImproved: 'Улучшены навыки',
-      backToMenu: 'В главное меню'
+      backToMenu: 'В главное меню',
+      showHint: '💡 Показать подсказку',
+      hint: 'Подсказка',
+      showExplanation: '📖 Показать объяснение',
+      explanation: 'Объяснение'
     },
 
     skills: {
@@ -424,6 +496,57 @@ export const translations: Record<Language, Translations> = {
       block: 'БЛОК!'
     },
 
+    botBattle: {
+      title: '🤖 Бой с ботом',
+      description: 'Сражайся с AI-противником в математических поединках! Отвечай на вопросы правильно и наноси урон.',
+      startButton: '🤖 Начать бой с ботом!',
+      playerInfo: 'Твой герой',
+      yourFighter: 'Твой боец:',
+      name: 'Имя',
+      levelLabel: 'Уровень',
+      hp: 'HP',
+      localMode: '✅ Локальный режим - сервер не требуется!',
+      offlineInfo: 'Бой с AI-ботом работает полностью офлайн',
+      exit: 'Выход',
+      exitConfirm: 'Выйти из боя?',
+      exitWarning: 'Прогресс боя будет потерян',
+      round: 'Раунд',
+      solveToAttack: 'Реши задачу чтобы атаковать!',
+      battleLog: '📜 Лог боя:',
+      timeOut: '⏱️ Время вышло',
+      botAttacks: 'Бот атакует!',
+      youAttack: 'Вы атакуете!',
+      correctAnswer: '✅ Правильный ответ',
+      wrongAnswer: '❌ Ошибка',
+      botDealt: 'Бот нанёс',
+      youDealt: 'Вы нанесли',
+      damage: 'урона',
+      botMissed: 'Бот промахнулся!',
+      aiOpponent: '🤖 AI Противник',
+      won: 'ПОБЕДА!',
+      lost: 'ПОРАЖЕНИЕ',
+      youDefeated: 'Вы победили',
+      defeated: 'победил!'
+    },
+
+    materials: {
+      title: '📚 База знаний - Материалы для обучения',
+      subtitle: 'Выберите тему для изучения теории, примеров и советов. После изучения нажмите "Тренировка" чтобы закрепить материал!',
+      selectTopic: 'Выберите тему'
+    },
+
+    taskUI: {
+      topic: 'Тема',
+      difficulty: 'Сложность',
+      solved: 'Решено',
+      accuracy: 'Точность',
+      needsAttention: '⚠️ Требует внимания',
+      level: 'Ур.',
+      tasks: 'задач',
+      confirmStop: '⚠️ Остановить тренировку? Вы получите штраф -50 XP за досрочное завершение.',
+      stopPenalty: 'Штраф -50 XP'
+    },
+
     common: {
       save: 'Сохранить',
       cancel: 'Отмена',
@@ -494,6 +617,9 @@ export const translations: Record<Language, Translations> = {
       training: '⚔️ Training',
       learning: '📚 Learning',
       pvp: '🎮 PvP Arena',
+      botBattle: '🎮 Bot Battle',
+      progress: '📊 Progress',
+      materials: '📖 Materials',
       skills: '✨ Skills',
       statistics: '📊 Statistics',
       guides: '📖 Guides',
@@ -521,6 +647,8 @@ export const translations: Record<Language, Translations> = {
       pause: 'Pause',
       resume: 'Resume',
       quit: 'Quit',
+      stop: '⏹️ Stop',
+      skip: 'Skip',
       exitWarning: 'Exit Session?',
       exitWarningDesc: 'Progress will be lost, combo will reset.',
       exitPenalty: 'Lose {xp} XP and reset combo',
@@ -540,7 +668,11 @@ export const translations: Record<Language, Translations> = {
       avgTime: 'Avg Time',
       xpGained: 'XP Gained',
       skillsImproved: 'Skills Improved',
-      backToMenu: 'Back to Menu'
+      backToMenu: 'Back to Menu',
+      showHint: '💡 Show Hint',
+      hint: 'Hint',
+      showExplanation: '📖 Show Explanation',
+      explanation: 'Explanation'
     },
 
     skills: {
@@ -640,6 +772,57 @@ export const translations: Record<Language, Translations> = {
       critical: 'CRITICAL HIT!',
       dodge: 'DODGE!',
       block: 'BLOCK!'
+    },
+
+    botBattle: {
+      title: '🤖 Bot Battle',
+      description: 'Battle against an AI opponent in math duels! Answer questions correctly to deal damage.',
+      startButton: '🤖 Start Bot Battle!',
+      playerInfo: 'Your Hero',
+      yourFighter: 'Your Fighter:',
+      name: 'Name',
+      levelLabel: 'Level',
+      hp: 'HP',
+      localMode: '✅ Local Mode - No Server Required!',
+      offlineInfo: 'AI bot battle works completely offline',
+      exit: 'Exit',
+      exitConfirm: 'Exit Battle?',
+      exitWarning: 'Battle progress will be lost',
+      round: 'Round',
+      solveToAttack: 'Solve the task to attack!',
+      battleLog: '📜 Battle Log:',
+      timeOut: '⏱️ Time\'s Up',
+      botAttacks: 'Bot attacks!',
+      youAttack: 'You attack!',
+      correctAnswer: '✅ Correct answer',
+      wrongAnswer: '❌ Wrong',
+      botDealt: 'Bot dealt',
+      youDealt: 'You dealt',
+      damage: 'damage',
+      botMissed: 'Bot missed!',
+      aiOpponent: '🤖 AI Opponent',
+      won: 'VICTORY!',
+      lost: 'DEFEAT',
+      youDefeated: 'You defeated',
+      defeated: 'won!'
+    },
+
+    materials: {
+      title: '📚 Knowledge Base - Learning Materials',
+      subtitle: 'Select a topic to study theory, examples, and tips. After studying, click "Training" to practice!',
+      selectTopic: 'Select a topic'
+    },
+
+    taskUI: {
+      topic: 'Topic',
+      difficulty: 'Difficulty',
+      solved: 'Solved',
+      accuracy: 'Accuracy',
+      needsAttention: '⚠️ Needs Attention',
+      level: 'Lv.',
+      tasks: 'tasks',
+      confirmStop: '⚠️ Stop training? You will receive a -50 XP penalty for early exit.',
+      stopPenalty: 'Penalty -50 XP'
     },
 
     common: {

@@ -9,6 +9,7 @@ import { Swords, Trophy, Heart, Zap, ArrowLeft } from 'lucide-react';
 import { Task, SkillType } from '../data/taskBank';
 import { getTasksForTraining } from '../data/taskProvider';
 import { AvatarProfile } from '../avatar/types';
+import { useI18n } from '../i18n/context';
 
 interface LocalBotBattleProps {
   playerAvatar: AvatarProfile | undefined;
@@ -37,6 +38,8 @@ export const LocalBotBattle: React.FC<LocalBotBattleProps> = ({
   onBattleEnd,
   onExit
 }) => {
+  const { t } = useI18n();
+
   const [playerHP, setPlayerHP] = useState(100 + playerLevel * 10);
   const [maxPlayerHP] = useState(100 + playerLevel * 10);
   const [bot, setBot] = useState<BotOpponent>({
@@ -197,12 +200,12 @@ export const LocalBotBattle: React.FC<LocalBotBattleProps> = ({
             style={{ minHeight: '44px' }}
           >
             <ArrowLeft className="w-5 h-5" />
-            Выход
+            {t('botBattle.exit')}
           </button>
 
           <div className="text-xl font-bold flex items-center gap-2">
             <Swords className="w-6 h-6 text-yellow-400" />
-            Бой с ботом • Раунд {round}
+            {t('botBattle.title')} • {t('botBattle.round')} {round}
           </div>
         </div>
 
@@ -217,12 +220,12 @@ export const LocalBotBattle: React.FC<LocalBotBattleProps> = ({
             <div className="text-center mb-4">
               <div className="text-6xl mb-2">{playerAvatar?.baseType === 'warrior' ? '⚔️' : '🧙‍♂️'}</div>
               <h3 className="text-2xl font-bold">{playerName}</h3>
-              <div className="text-sm text-gray-300">Уровень {playerLevel}</div>
+              <div className="text-sm text-gray-300">{t('botBattle.levelLabel')} {playerLevel}</div>
             </div>
 
             <div className="mb-2">
               <div className="flex justify-between text-sm mb-1">
-                <span>❤️ HP:</span>
+                <span>❤️ {t('botBattle.hp')}:</span>
                 <span>{playerHP}/{maxPlayerHP}</span>
               </div>
               <div className="w-full h-4 bg-slate-700 rounded-full overflow-hidden">
@@ -237,10 +240,10 @@ export const LocalBotBattle: React.FC<LocalBotBattleProps> = ({
 
             {playerAvatar && (
               <div className="grid grid-cols-2 gap-2 mt-4 text-xs">
-                <div>💪 Сила: {playerAvatar.gameStats.strength}</div>
-                <div>⚡ Ловкость: {playerAvatar.gameStats.agility}</div>
-                <div>🛡️ Броня: {playerAvatar.gameStats.defense}</div>
-                <div>✨ Магия: {playerAvatar.gameStats.magic}</div>
+                <div>💪 {t('skills.strength')}: {playerAvatar.gameStats.strength}</div>
+                <div>⚡ {t('skills.agility')}: {playerAvatar.gameStats.agility}</div>
+                <div>🛡️ {t('skills.defense')}: {playerAvatar.gameStats.defense}</div>
+                <div>✨ {t('skills.magic')}: {playerAvatar.gameStats.magic}</div>
               </div>
             )}
           </motion.div>
@@ -254,12 +257,12 @@ export const LocalBotBattle: React.FC<LocalBotBattleProps> = ({
             <div className="text-center mb-4">
               <div className="text-6xl mb-2">{bot.avatar}</div>
               <h3 className="text-2xl font-bold">{bot.name}</h3>
-              <div className="text-sm text-gray-300">Уровень {bot.level}</div>
+              <div className="text-sm text-gray-300">{t('botBattle.levelLabel')} {bot.level}</div>
             </div>
 
             <div className="mb-2">
               <div className="flex justify-between text-sm mb-1">
-                <span>❤️ HP:</span>
+                <span>❤️ {t('botBattle.hp')}:</span>
                 <span>{bot.hp}/{bot.maxHp}</span>
               </div>
               <div className="w-full h-4 bg-slate-700 rounded-full overflow-hidden">
@@ -273,14 +276,14 @@ export const LocalBotBattle: React.FC<LocalBotBattleProps> = ({
             </div>
 
             <div className="mt-4 p-3 bg-black/30 rounded-lg text-center text-sm">
-              🤖 AI Противник
+              {t('botBattle.aiOpponent')}
             </div>
           </motion.div>
         </div>
 
         {/* Battle Log */}
         <div className="bg-slate-800 rounded-lg p-4 mb-6 h-32 overflow-y-auto">
-          <h4 className="font-bold mb-2 text-yellow-400">📜 Лог боя:</h4>
+          <h4 className="font-bold mb-2 text-yellow-400">{t('botBattle.battleLog')}</h4>
           {battleLog.map((log, i) => (
             <div key={i} className="text-sm text-gray-300">{log}</div>
           ))}
@@ -294,7 +297,7 @@ export const LocalBotBattle: React.FC<LocalBotBattleProps> = ({
             className="bg-slate-800 rounded-xl p-6"
           >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Реши задачу чтобы атаковать!</h3>
+              <h3 className="text-xl font-bold">{t('botBattle.solveToAttack')}</h3>
               <div className={`text-2xl font-bold ${timeLeft < 10 ? 'text-red-400 animate-pulse' : 'text-blue-400'}`}>
                 ⏱️ {timeLeft}с
               </div>
@@ -346,12 +349,12 @@ export const LocalBotBattle: React.FC<LocalBotBattleProps> = ({
               }`}>
                 <div className="text-8xl mb-4">{playerWon ? '🏆' : '💔'}</div>
                 <h2 className="text-4xl font-bold mb-4">
-                  {playerWon ? 'ПОБЕДА!' : 'ПОРАЖЕНИЕ'}
+                  {playerWon ? t('botBattle.won') : t('botBattle.lost')}
                 </h2>
                 <p className="text-xl mb-6">
                   {playerWon
-                    ? `Вы победили ${bot.name}!`
-                    : `${bot.name} победил!`
+                    ? `${t('botBattle.youDefeated')} ${bot.name}!`
+                    : `${bot.name} ${t('botBattle.defeated')}`
                   }
                 </p>
                 <p className="text-lg">
