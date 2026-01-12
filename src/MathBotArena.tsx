@@ -53,6 +53,7 @@ import {
 import { questionService } from './engine/questionService';
 import { questionsToTasks, getSkillIdFromTask, logSessionSummary, TaskWithOptions as AdapterTaskWithOptions } from './engine/questionAdapter';
 import type { SkillId } from './types/question';
+import { createSkillId, QuestionDomain, QuestionTopic } from './types/question';
 
 // ==================== TYPES ====================
 
@@ -493,56 +494,119 @@ const MathBotArena: React.FC = () => {
 
   // ==================== START SESSION ====================
 
-  const startSession = useCallback(async (skillType: SkillType, mode: 'learning' | 'training') => {
+  const startSession = useCallback(async (
+    skillType: SkillType,
+    mode: 'learning' | 'training',
+    topic?: string,
+    subtopic?: string
+  ) => {
     if (!userData) return;
 
     const category = getAgeCategory(userData.age);
     const questionCount = AGE_CATEGORIES[category].questions;
 
     try {
-      // 🆕 Use new Question Service for adaptive, standards-aligned questions
-      console.log(`[Session] Starting ${mode} session for ${skillType} (age ${userData.age})`);
+      console.log(`[Session] Starting ${mode} session for ${skillType}, topic: ${topic || 'any'}, subtopic: ${subtopic || 'any'} (age ${userData.age})`);
 
-      // Map SkillType to SkillId (best effort)
-      const focusSkillId: SkillId = `${skillType}_${skillType}` as SkillId;
+      // Build SkillId from domain/topic/subtopic
+      let focusSkillId: SkillId;
+      if (topic) {
+        // Map domain (skillType) to proper QuestionDomain
+        const domain = skillType.charAt(0).toUpperCase() + skillType.slice(1) as QuestionDomain;
+        // Create skillId: domain_topic or domain_topic_subtopic
+        focusSkillId = subtopic
+          ? createSkillId(domain, topic as QuestionTopic, subtopic)
+          : createSkillId(domain, topic as QuestionTopic);
 
-      // Create adaptive session with new question engine
-      const sessionPlan = await questionService.createRecommendedSession(
-        userData.age,
-        questionCount,
-        'en' // TODO: use userData.language when available
-      );
+        console.log(`[Session] Focused session on skill: ${focusSkillId}`);
 
-      // Convert Questions to old Task format using adapter
-      const questions: TaskWithOptions[] = questionsToTasks(sessionPlan.questions);
+        // Create focused session with specific skill
+        const sessionPlan = await questionService.createSession(
+          userData.age,
+          focusSkillId,
+          questionCount,
+          'en' // TODO: use userData.language when available
+        );
 
-      // Log session summary for debugging
-      logSessionSummary(questions);
+        // Check if we got questions for this skill
+        if (sessionPlan.questions.length === 0) {
+          setShowModal({
+            type: 'info',
+            message: `📚 Нет вопросов по теме "${topic}"${subtopic ? ` / ${subtopic}` : ''}\n\nПопробуйте выбрать другую тему или используйте режим "Рекомендованные".`
+          });
+          return;
+        }
 
-      const newSession: SessionData = {
-        active: true,
-        mode,
-        skillType,
-        currentQ: 0,
-        totalQ: questionCount,
-        correct: 0,
-        questions,
-        startedAt: Date.now(),
-        appSwitches: 0,
-        suspiciousActivity: false,
-      };
+        // Convert Questions to old Task format using adapter
+        const questions: TaskWithOptions[] = questionsToTasks(sessionPlan.questions);
+        logSessionSummary(questions);
 
-      setSession(newSession);
-      setCurrentTask(questions[0]);
-    setCombo(0);
-    setFeedback(null);
+        const newSession: SessionData = {
+          active: true,
+          mode,
+          skillType,
+          currentQ: 0,
+          totalQ: questionCount,
+          correct: 0,
+          questions,
+          startedAt: Date.now(),
+          appSwitches: 0,
+          suspiciousActivity: false,
+        };
 
-      if (mode === 'training') {
-        setTimeLeft(questions[0].time || 45);
-        setIsTimerActive(true);
-        setAnswerStartTime(Date.now());
+        setSession(newSession);
+        setCurrentTask(questions[0]);
+        setCombo(0);
+        setFeedback(null);
+
+        if (mode === 'training') {
+          setTimeLeft(questions[0].time || 45);
+          setIsTimerActive(true);
+          setAnswerStartTime(Date.now());
+        } else {
+          setIsTimerActive(false);
+        }
       } else {
-        setIsTimerActive(false);
+        // No specific topic - use recommended session
+        console.log(`[Session] Recommended session (no specific topic)`);
+
+        const sessionPlan = await questionService.createRecommendedSession(
+          userData.age,
+          questionCount,
+          'en'
+        );
+
+        // Convert Questions to old Task format using adapter
+        const questions: TaskWithOptions[] = questionsToTasks(sessionPlan.questions);
+
+        // Log session summary for debugging
+        logSessionSummary(questions);
+
+        const newSession: SessionData = {
+          active: true,
+          mode,
+          skillType,
+          currentQ: 0,
+          totalQ: questionCount,
+          correct: 0,
+          questions,
+          startedAt: Date.now(),
+          appSwitches: 0,
+          suspiciousActivity: false,
+        };
+
+        setSession(newSession);
+        setCurrentTask(questions[0]);
+        setCombo(0);
+        setFeedback(null);
+
+        if (mode === 'training') {
+          setTimeLeft(questions[0].time || 45);
+          setIsTimerActive(true);
+          setAnswerStartTime(Date.now());
+        } else {
+          setIsTimerActive(false);
+        }
       }
     } catch (error) {
       console.error('[Session] Failed to create session:', error);
@@ -1166,7 +1230,7 @@ const MathBotArena: React.FC = () => {
         </div>
 
         {/* Content Area */}
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           {/* Training Dashboard - New Question Engine based UI */}
           {activeTab === 'training' && !session.active && userData && (
             <motion.div
@@ -1179,8 +1243,8 @@ const MathBotArena: React.FC = () => {
                 userAge={userData.age}
                 userId={userData.email}
                 onStartTraining={(skillType, topic, subtopic) => {
-                  // Start training with optional topic/subtopic filters
-                  startSession(skillType, 'training');
+                  // Start training with selected topic/subtopic filters
+                  startSession(skillType, 'training', topic, subtopic);
                 }}
                 skillStats={playerBot.statistics.skillStats}
               />

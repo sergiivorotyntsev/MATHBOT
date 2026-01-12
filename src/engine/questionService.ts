@@ -32,6 +32,7 @@ import {
   SessionPlan
 } from './sessionBuilder';
 import { generateQuestionBank } from './questionGenerator';
+import { validateAndLog, assertTopicFidelity } from './questionValidator';
 
 // ==================== STORAGE KEYS ====================
 
@@ -105,6 +106,9 @@ class QuestionService {
     console.log('[QuestionService] Generating question bank...');
     this.questionBank = generateQuestionBank(100, 'en'); // 100 variants per config
 
+    // Validate question bank (dev mode only)
+    validateAndLog(this.questionBank);
+
     // Cache it
     try {
       localStorage.setItem(QUESTION_BANK_KEY, JSON.stringify(this.questionBank));
@@ -170,6 +174,19 @@ class QuestionService {
 
     if (!validateSession(plan)) {
       console.error('[QuestionService] Session validation failed!');
+    }
+
+    // Dev-only: Validate topic fidelity for focused sessions
+    if (import.meta.env.DEV && plan.questions.length > 0) {
+      // Extract expected domain/topic from skillId (format: domain_topic or domain_topic_subtopic)
+      const parts = focusSkillId.split('_');
+      if (parts.length >= 2) {
+        const expectedDomain = (parts[0].charAt(0).toUpperCase() + parts[0].slice(1)) as any;
+        const fidelity = assertTopicFidelity(plan.questions, expectedDomain);
+        if (!fidelity.valid) {
+          console.warn(`[QuestionService] Topic fidelity violations for ${focusSkillId}:`, fidelity.violations);
+        }
+      }
     }
 
     return plan;
