@@ -63,9 +63,11 @@ export const LocalBotBattle: React.FC<LocalBotBattleProps> = ({
     const skillTypes: SkillType[] = ['arithmetic', 'geometry', 'logic'];
     const randomSkill = skillTypes[Math.floor(Math.random() * skillTypes.length)];
 
-    // Get a random task from the generator
-    const tasks = getTasksForTraining(randomSkill, 1, playerName);
-    const randomTask = tasks[0];
+    // Get multiple tasks to increase variety (avoid repetition)
+    // Request 30 tasks and pick a random one from the pool
+    const tasks = getTasksForTraining(randomSkill, 30, playerName);
+    const randomIndex = Math.floor(Math.random() * tasks.length);
+    const randomTask = tasks[randomIndex];
 
     // Generate answer options
     const options = new Set<number>([randomTask.a]);
