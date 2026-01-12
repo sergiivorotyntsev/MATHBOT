@@ -50,6 +50,9 @@ import {
   updateStreak,
   checkAchievements
 } from './types/gamification';
+import { questionService } from './engine/questionService';
+import { questionsToTasks, getSkillIdFromTask, logSessionSummary, TaskWithOptions as AdapterTaskWithOptions } from './engine/questionAdapter';
+import type { SkillId } from './types/question';
 
 // ==================== TYPES ====================
 
@@ -490,56 +493,106 @@ const MathBotArena: React.FC = () => {
 
   // ==================== START SESSION ====================
 
-  const startSession = useCallback((skillType: SkillType, mode: 'learning' | 'training') => {
+  const startSession = useCallback(async (skillType: SkillType, mode: 'learning' | 'training') => {
     if (!userData) return;
 
     const category = getAgeCategory(userData.age);
     const questionCount = AGE_CATEGORIES[category].questions;
 
-    // Use task provider to get tasks (now uses Question Engine with 40,000+ CCSS-aligned questions)
-    const tasks = getTasksForTraining(skillType, questionCount, userData.email, userData.age);
+    try {
+      // 🆕 Use new Question Service for adaptive, standards-aligned questions
+      console.log(`[Session] Starting ${mode} session for ${skillType} (age ${userData.age})`);
 
-    // Add options and index to tasks
-    const questions: TaskWithOptions[] = tasks.map((task, index) => ({
-      ...task,
-      options: generateAnswerOptions(task.a),
-      index
-    }));
+      // Map SkillType to SkillId (best effort)
+      const focusSkillId: SkillId = `${skillType}_${skillType}` as SkillId;
 
-    const newSession: SessionData = {
-      active: true,
-      mode,
-      skillType,
-      currentQ: 0,
-      totalQ: questionCount,
-      correct: 0,
-      questions,
-      startedAt: Date.now(),
-      appSwitches: 0,
-      suspiciousActivity: false,
-    };
+      // Create adaptive session with new question engine
+      const sessionPlan = await questionService.createRecommendedSession(
+        userData.age,
+        questionCount,
+        'en' // TODO: use userData.language when available
+      );
 
-    setSession(newSession);
-    setCurrentTask(questions[0]);
+      // Convert Questions to old Task format using adapter
+      const questions: TaskWithOptions[] = questionsToTasks(sessionPlan.questions);
+
+      // Log session summary for debugging
+      logSessionSummary(questions);
+
+      const newSession: SessionData = {
+        active: true,
+        mode,
+        skillType,
+        currentQ: 0,
+        totalQ: questionCount,
+        correct: 0,
+        questions,
+        startedAt: Date.now(),
+        appSwitches: 0,
+        suspiciousActivity: false,
+      };
+
+      setSession(newSession);
+      setCurrentTask(questions[0]);
     setCombo(0);
     setFeedback(null);
 
-    if (mode === 'training') {
-      setTimeLeft(questions[0].time || 45);
-      setIsTimerActive(true);
-      setAnswerStartTime(Date.now());
-    } else {
-      setIsTimerActive(false);
+      if (mode === 'training') {
+        setTimeLeft(questions[0].time || 45);
+        setIsTimerActive(true);
+        setAnswerStartTime(Date.now());
+      } else {
+        setIsTimerActive(false);
+      }
+    } catch (error) {
+      console.error('[Session] Failed to create session:', error);
+
+      // Fallback to old system if new system fails
+      console.log('[Session] Falling back to old task provider');
+      const tasks = getTasksForTraining(skillType, questionCount, userData.email, userData.age);
+
+      const questions: TaskWithOptions[] = tasks.map((task, index) => ({
+        ...task,
+        options: generateAnswerOptions(task.a),
+        index
+      }));
+
+      const newSession: SessionData = {
+        active: true,
+        mode,
+        skillType,
+        currentQ: 0,
+        totalQ: questionCount,
+        correct: 0,
+        questions,
+        startedAt: Date.now(),
+        appSwitches: 0,
+        suspiciousActivity: false,
+      };
+
+      setSession(newSession);
+      setCurrentTask(questions[0]);
+      setCombo(0);
+      setFeedback(null);
+
+      if (mode === 'training') {
+        setTimeLeft(questions[0].time || 45);
+        setIsTimerActive(true);
+        setAnswerStartTime(Date.now());
+      } else {
+        setIsTimerActive(false);
+      }
     }
   }, [userData]);
 
   // ==================== HANDLE ANSWER ====================
 
-  const handleAnswer = useCallback((answer: number) => {
+  const handleAnswer = useCallback(async (answer: number) => {
     if (!currentTask || feedback) return;
 
     setIsTimerActive(false);
     const timeTaken = Math.floor((Date.now() - answerStartTime) / 1000);
+    const timeMs = Date.now() - answerStartTime;
     const correct = answer === currentTask.a;
 
     if (correct) {
@@ -556,6 +609,24 @@ const MathBotArena: React.FC = () => {
       });
 
       const xpGained = scoreBreakdown.xpGained;
+
+      // 🆕 Record answer to new stats system
+      try {
+        const skillId = getSkillIdFromTask(currentTask);
+        if (skillId) {
+          await questionService.recordAnswer({
+            skillId,
+            correct: true,
+            timeMs,
+            xpGained,
+            timestamp: Date.now(),
+            difficultyTier: currentTask.d
+          });
+          console.log(`[Stats] Recorded correct answer for ${skillId}`);
+        }
+      } catch (error) {
+        console.error('[Stats] Failed to record answer:', error);
+      }
 
       setCombo(newCombo);
 
@@ -621,6 +692,24 @@ const MathBotArena: React.FC = () => {
       });
     } else {
       setCombo(0);
+
+      // 🆕 Record incorrect answer to new stats system
+      try {
+        const skillId = getSkillIdFromTask(currentTask);
+        if (skillId) {
+          await questionService.recordAnswer({
+            skillId,
+            correct: false,
+            timeMs,
+            xpGained: 0,
+            timestamp: Date.now(),
+            difficultyTier: currentTask.d
+          });
+          console.log(`[Stats] Recorded incorrect answer for ${skillId}`);
+        }
+      } catch (error) {
+        console.error('[Stats] Failed to record answer:', error);
+      }
 
       // Track error (✅ immutably)
       setPlayerBot(prev => ({
