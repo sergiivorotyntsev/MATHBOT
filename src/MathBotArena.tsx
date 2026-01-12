@@ -472,8 +472,8 @@ const MathBotArena: React.FC = () => {
     const category = getAgeCategory(userData.age);
     const questionCount = AGE_CATEGORIES[category].questions;
 
-    // Use task provider to get tasks (uses generator with ~10,000 tasks)
-    const tasks = getTasksForTraining(skillType, questionCount, userData.email);
+    // Use task provider to get tasks (now uses Question Engine with 40,000+ CCSS-aligned questions)
+    const tasks = getTasksForTraining(skillType, questionCount, userData.email, userData.age);
 
     // Add options and index to tasks
     const questions: TaskWithOptions[] = tasks.map((task, index) => ({

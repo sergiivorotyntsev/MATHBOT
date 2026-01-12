@@ -1,14 +1,16 @@
 /**
  * 📋 Task Provider - Unified interface for tasks
  *
- * Provides tasks from both:
+ * Provides tasks from:
  * - Original taskBank (legacy)
- * - Task Generator (new, ~10,000 tasks)
+ * - Task Generator (intermediate, ~10,000 tasks)
+ * - Question Engine (new, CCSS-aligned, 40,000+ questions)
  */
 
 import { Task, SkillType, taskBank } from './taskBank';
 import { MathSkillKey } from '../types/mathSkills';
 import { generateTasksForTopic, getTaskForTopic } from './taskGenerator';
+import { getQuestionEngineAdapter } from '../engine/questionEngineAdapter';
 
 // Map SkillType to MathSkillKey topics
 const SKILL_TO_TOPICS: Record<SkillType, MathSkillKey[]> = {
@@ -57,9 +59,32 @@ export function getTaskForMathSkill(
 }
 
 /**
- * Check if using generated tasks (can be toggled via feature flag)
+ * Task source selection
  */
-export const USE_GENERATED_TASKS = true; // Set to true to use generator, false for original taskBank
+export type TaskSource = 'legacy' | 'generator' | 'question-engine';
+
+/**
+ * Current task source (can be toggled via feature flag)
+ */
+export const TASK_SOURCE: TaskSource = 'question-engine'; // 'legacy' | 'generator' | 'question-engine'
+
+/**
+ * Get tasks for training session using Question Engine
+ */
+export function getTasksFromQuestionEngine(
+  skillType: SkillType,
+  count: number,
+  userId: string = 'default',
+  userAge: number = 8
+): Task[] {
+  try {
+    const adapter = getQuestionEngineAdapter(userId, userAge);
+    return adapter.getTasksForTraining(skillType, count);
+  } catch (error) {
+    console.error('Question Engine failed, falling back to generator:', error);
+    return getGeneratedTasksForSkill(skillType, count, userId);
+  }
+}
 
 /**
  * Get tasks for training session (auto-selects source)
@@ -67,24 +92,31 @@ export const USE_GENERATED_TASKS = true; // Set to true to use generator, false 
 export function getTasksForTraining(
   skillType: SkillType,
   count: number,
-  userId: string = 'default'
+  userId: string = 'default',
+  userAge?: number
 ): Task[] {
-  if (USE_GENERATED_TASKS) {
-    return getGeneratedTasksForSkill(skillType, count, userId);
-  } else {
-    // Use original taskBank
-    const bank = taskBank[skillType];
-    const tasks: Task[] = [];
-    const usedIndices = new Set<number>();
+  switch (TASK_SOURCE) {
+    case 'question-engine':
+      return getTasksFromQuestionEngine(skillType, count, userId, userAge || 8);
 
-    while (tasks.length < count && usedIndices.size < bank.length) {
-      const randomIndex = Math.floor(Math.random() * bank.length);
-      if (!usedIndices.has(randomIndex)) {
-        usedIndices.add(randomIndex);
-        tasks.push(bank[randomIndex]);
+    case 'generator':
+      return getGeneratedTasksForSkill(skillType, count, userId);
+
+    case 'legacy':
+    default:
+      // Use original taskBank
+      const bank = taskBank[skillType];
+      const tasks: Task[] = [];
+      const usedIndices = new Set<number>();
+
+      while (tasks.length < count && usedIndices.size < bank.length) {
+        const randomIndex = Math.floor(Math.random() * bank.length);
+        if (!usedIndices.has(randomIndex)) {
+          usedIndices.add(randomIndex);
+          tasks.push(bank[randomIndex]);
+        }
       }
-    }
 
-    return tasks;
+      return tasks;
   }
 }
