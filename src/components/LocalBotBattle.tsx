@@ -6,7 +6,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Swords, Trophy, Heart, Zap, ArrowLeft } from 'lucide-react';
-import { Task, SkillType, taskBank } from '../data/taskBank';
+import { Task, SkillType } from '../data/taskBank';
+import { getTasksForTraining } from '../data/taskProvider';
 import { AvatarProfile } from '../avatar/types';
 
 interface LocalBotBattleProps {
@@ -54,12 +55,14 @@ export const LocalBotBattle: React.FC<LocalBotBattleProps> = ({
   const [gameOver, setGameOver] = useState(false);
   const [playerWon, setPlayerWon] = useState(false);
 
-  // Generate random task
+  // Generate random task using task provider
   const generateTask = useCallback(() => {
     const skillTypes: SkillType[] = ['arithmetic', 'geometry', 'logic'];
     const randomSkill = skillTypes[Math.floor(Math.random() * skillTypes.length)];
-    const bank = taskBank[randomSkill];
-    const randomTask = bank[Math.floor(Math.random() * bank.length)];
+
+    // Get a random task from the generator
+    const tasks = getTasksForTraining(randomSkill, 1, playerName);
+    const randomTask = tasks[0];
 
     // Generate answer options
     const options = new Set<number>([randomTask.a]);
@@ -74,7 +77,7 @@ export const LocalBotBattle: React.FC<LocalBotBattleProps> = ({
       ...randomTask,
       options: Array.from(options).sort(() => Math.random() - 0.5)
     };
-  }, []);
+  }, [playerName]);
 
   // Start new round
   useEffect(() => {

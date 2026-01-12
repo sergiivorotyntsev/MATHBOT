@@ -21,6 +21,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Trophy, Star, Clock, User, Settings, Flame, BookOpen, BarChart3, ArrowLeft, Lightbulb, Swords, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { taskBank, Task, SkillType } from './data/taskBank';
+import { getTasksForTraining } from './data/taskProvider';
 import { methodologyGuides, getGuideByTopic } from './data/methodologyGuides';
 import { LocalBotBattle } from './components/LocalBotBattle';
 import { I18nProvider } from './i18n/context';
@@ -465,14 +466,16 @@ const MathBotArena: React.FC = () => {
 
     const category = getAgeCategory(userData.age);
     const questionCount = AGE_CATEGORIES[category].questions;
-    const usedIndices: number[] = [];
-    const questions: TaskWithOptions[] = [];
 
-    for (let i = 0; i < questionCount; i++) {
-      const task = generateTask(skillType, usedIndices);
-      usedIndices.push(task.index);
-      questions.push(task);
-    }
+    // Use task provider to get tasks (uses generator with ~10,000 tasks)
+    const tasks = getTasksForTraining(skillType, questionCount, userData.email);
+
+    // Add options and index to tasks
+    const questions: TaskWithOptions[] = tasks.map((task, index) => ({
+      ...task,
+      options: generateAnswerOptions(task.a),
+      index
+    }));
 
     const newSession: SessionData = {
       active: true,
@@ -499,7 +502,7 @@ const MathBotArena: React.FC = () => {
     } else {
       setIsTimerActive(false);
     }
-  }, [userData, generateTask]);
+  }, [userData]);
 
   // ==================== HANDLE ANSWER ====================
 
