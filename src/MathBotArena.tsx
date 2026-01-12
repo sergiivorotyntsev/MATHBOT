@@ -237,7 +237,8 @@ const mapTopicToMathSkill = (topicString: string): MathSkillKey => {
   if (topicLower.includes('объём') || topicLower.includes('объем') || topicLower.includes('volume')) return 'volume';
   if (topicLower.includes('угл') || topicLower.includes('angle')) return 'angles';
 
-  // Logic
+  // Logic - CHECK SPECIFIC MATCHES FIRST!
+  if (topicLower.includes('текстов') || topicLower.includes('word')) return 'wordProblems';
   if (topicLower.includes('паттерн') || topicLower.includes('pattern')) return 'patterns';
   if (topicLower.includes('последовательн') || topicLower.includes('sequence') || topicLower.includes('прогресс')) return 'sequences';
   if (topicLower.includes('задач') || topicLower.includes('problem')) return 'problemSolving';
