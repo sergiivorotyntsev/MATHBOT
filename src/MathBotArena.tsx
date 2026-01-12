@@ -530,9 +530,18 @@ const MathBotArena: React.FC = () => {
 
         // Check if we got questions for this skill
         if (sessionPlan.questions.length === 0) {
+          // Get available count for debugging
+          const availableCount = await questionService.countQuestionsByTopic(
+            skillType,
+            topic,
+            userData.age
+          );
+
+          console.log(`[Session] No questions for ${focusSkillId}, available in bank: ${availableCount}`);
+
           setShowModal({
             type: 'info',
-            message: `📚 Нет вопросов по теме "${topic}"${subtopic ? ` / ${subtopic}` : ''}\n\nПопробуйте выбрать другую тему или используйте режим "Рекомендованные".`
+            message: `📚 Нет вопросов для тренировки\n\n🎯 Тема: "${topic}"${subtopic ? ` / ${subtopic}` : ''}\n💾 Доступно в банке: ${availableCount} вопросов\n\n${availableCount > 0 ? '⚠️ Возможно, вопросы не подходят для вашего возраста или уже изучены.' : '💡 Попробуйте другую тему или режим "Рекомендованные".'}`
           });
           return;
         }

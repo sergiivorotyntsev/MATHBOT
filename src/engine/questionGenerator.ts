@@ -475,6 +475,437 @@ const patternsTemplate: QuestionTemplate = {
   }
 };
 
+// ==================== MORE ARITHMETIC TEMPLATES ====================
+
+const countingTemplate: QuestionTemplate = {
+  templateId: 'arithmetic_counting',
+  domain: 'Arithmetic',
+  topic: 'Counting',
+  gradeBands: ['K-1', '2-3'],
+  difficultyTiers: [1, 2, 3],
+  prerequisites: [],
+  tags: ['arithmetic', 'counting', 'basic'],
+
+  generate({ seed, gradeBand, tier, language }) {
+    const rng = new SeededRandom(seed);
+
+    const maxNum = gradeBand === 'K-1' ? (tier === 1 ? 10 : tier === 2 ? 20 : 50) : (tier === 1 ? 50 : tier === 2 ? 100 : 200);
+    const start = rng.nextInt(1, maxNum - 10);
+    const countBy = tier === 1 ? 1 : tier === 2 ? rng.choice([1, 2, 5]) : rng.choice([2, 5, 10]);
+    const steps = rng.nextInt(3, 7);
+    const correctAnswer = start + countBy * steps;
+
+    const wrongAnswers = [
+      correctAnswer + countBy,
+      correctAnswer - countBy,
+      start + countBy * (steps + 1),
+      start + countBy * (steps - 1)
+    ].filter(x => x > 0 && x !== correctAnswer);
+
+    const choices = rng.shuffle([...wrongAnswers.slice(0, 3), correctAnswer]).map(String);
+
+    return {
+      language,
+      prompt: language === 'ru'
+        ? `Считайте от ${start} вперед на ${countBy}: ${start}, ${start + countBy}, ${start + countBy * 2}, ... Какое число будет через ${steps} шагов?`
+        : `Count forward from ${start} by ${countBy}: ${start}, ${start + countBy}, ${start + countBy * 2}, ... What number comes after ${steps} steps?`,
+      choices,
+      correctAnswer: String(correctAnswer),
+      explanation: language === 'ru'
+        ? `${start} + (${countBy} × ${steps}) = ${correctAnswer}`
+        : `${start} + (${countBy} × ${steps}) = ${correctAnswer}`,
+      domain: 'Arithmetic',
+      topic: 'Counting',
+      gradeBand,
+      ageBand: gradeBandToAgeBand(gradeBand),
+      difficultyTier: tier,
+      globalDifficulty: calculateGlobalDifficulty(gradeBand, tier),
+      prerequisites: [],
+      tags: ['arithmetic', 'counting', 'skip-counting']
+    };
+  }
+};
+
+const fractionsTemplate: QuestionTemplate = {
+  templateId: 'arithmetic_fractions_basic',
+  domain: 'Arithmetic',
+  topic: 'Fractions',
+  gradeBands: ['2-3', '4-5', '6-7'],
+  difficultyTiers: [1, 2, 3, 4, 5],
+  prerequisites: [createSkillId('Arithmetic', 'Division')],
+  tags: ['arithmetic', 'fractions'],
+
+  generate({ seed, gradeBand, tier, language }) {
+    const rng = new SeededRandom(seed);
+
+    const denominators = tier === 1 ? [2, 4] : tier === 2 ? [2, 4, 8] : tier === 3 ? [2, 3, 4, 6] : [2, 3, 4, 5, 6, 8, 10];
+    const denominator = rng.choice(denominators);
+    const numerator1 = rng.nextInt(1, denominator - 1);
+    const numerator2 = rng.nextInt(1, denominator - numerator1);
+    const correctAnswer = numerator1 + numerator2;
+
+    const wrongAnswers = [
+      correctAnswer + 1,
+      correctAnswer - 1,
+      numerator1 + numerator2 + denominator,
+      Math.abs(numerator1 - numerator2)
+    ].filter(x => x > 0 && x < denominator && x !== correctAnswer);
+
+    const choices = rng.shuffle([...wrongAnswers.slice(0, 3), correctAnswer]).map(x => `${x}/${denominator}`);
+
+    return {
+      language,
+      prompt: language === 'ru'
+        ? `Чему равно ${numerator1}/${denominator} + ${numerator2}/${denominator}?`
+        : `What is ${numerator1}/${denominator} + ${numerator2}/${denominator}?`,
+      choices,
+      correctAnswer: `${correctAnswer}/${denominator}`,
+      explanation: language === 'ru'
+        ? `При одинаковых знаменателях складываем числители: ${numerator1} + ${numerator2} = ${correctAnswer}`
+        : `With same denominators, add numerators: ${numerator1} + ${numerator2} = ${correctAnswer}`,
+      domain: 'Arithmetic',
+      topic: 'Fractions',
+      gradeBand,
+      ageBand: gradeBandToAgeBand(gradeBand),
+      difficultyTier: tier,
+      globalDifficulty: calculateGlobalDifficulty(gradeBand, tier),
+      prerequisites: [createSkillId('Arithmetic', 'Division')],
+      tags: ['arithmetic', 'fractions', 'addition']
+    };
+  }
+};
+
+const decimalsTemplate: QuestionTemplate = {
+  templateId: 'arithmetic_decimals_basic',
+  domain: 'Arithmetic',
+  topic: 'Decimals',
+  gradeBands: ['4-5', '6-7', '8-9'],
+  difficultyTiers: [1, 2, 3, 4, 5],
+  prerequisites: [createSkillId('Arithmetic', 'Fractions')],
+  tags: ['arithmetic', 'decimals'],
+
+  generate({ seed, gradeBand, tier, language }) {
+    const rng = new SeededRandom(seed);
+
+    const maxWhole = tier === 1 ? 10 : tier === 2 ? 50 : 100;
+    const decimals = tier <= 2 ? 1 : 2;
+
+    const a = rng.nextInt(1, maxWhole) + rng.nextInt(0, 9) / 10 + (decimals === 2 ? rng.nextInt(0, 9) / 100 : 0);
+    const b = rng.nextInt(1, maxWhole) + rng.nextInt(0, 9) / 10 + (decimals === 2 ? rng.nextInt(0, 9) / 100 : 0);
+    const correctAnswer = Math.round((a + b) * 100) / 100;
+
+    const wrongAnswers = [
+      Math.round((correctAnswer + 0.1) * 100) / 100,
+      Math.round((correctAnswer - 0.1) * 100) / 100,
+      Math.round((a + b + 1) * 100) / 100,
+      Math.round((Math.abs(a - b)) * 100) / 100
+    ].filter(x => x > 0 && x !== correctAnswer);
+
+    const choices = rng.shuffle([...wrongAnswers.slice(0, 3), correctAnswer]).map(x => x.toFixed(decimals));
+
+    return {
+      language,
+      prompt: language === 'ru'
+        ? `Чему равно ${a.toFixed(decimals)} + ${b.toFixed(decimals)}?`
+        : `What is ${a.toFixed(decimals)} + ${b.toFixed(decimals)}?`,
+      choices,
+      correctAnswer: correctAnswer.toFixed(decimals),
+      explanation: language === 'ru'
+        ? `${a.toFixed(decimals)} + ${b.toFixed(decimals)} = ${correctAnswer.toFixed(decimals)}`
+        : `${a.toFixed(decimals)} + ${b.toFixed(decimals)} = ${correctAnswer.toFixed(decimals)}`,
+      domain: 'Arithmetic',
+      topic: 'Decimals',
+      gradeBand,
+      ageBand: gradeBandToAgeBand(gradeBand),
+      difficultyTier: tier,
+      globalDifficulty: calculateGlobalDifficulty(gradeBand, tier),
+      prerequisites: [createSkillId('Arithmetic', 'Fractions')],
+      tags: ['arithmetic', 'decimals', 'addition']
+    };
+  }
+};
+
+const placeValueTemplate: QuestionTemplate = {
+  templateId: 'arithmetic_place_value',
+  domain: 'Arithmetic',
+  topic: 'Place Value',
+  gradeBands: ['K-1', '2-3', '4-5'],
+  difficultyTiers: [1, 2, 3, 4, 5],
+  prerequisites: [],
+  tags: ['arithmetic', 'place-value'],
+
+  generate({ seed, gradeBand, tier, language }) {
+    const rng = new SeededRandom(seed);
+
+    const maxDigits = gradeBand === 'K-1' ? 2 : gradeBand === '2-3' ? 3 : 4;
+    const targetPlace = tier === 1 ? 'ones' : tier === 2 ? 'tens' : tier === 3 ? 'hundreds' : tier === 4 ? 'thousands' : 'ten-thousands';
+
+    const number = rng.nextInt(10 ** (maxDigits - 1), 10 ** maxDigits - 1);
+    const numStr = String(number);
+
+    let correctAnswer: number;
+    let placeName: string;
+
+    if (targetPlace === 'ones') {
+      correctAnswer = parseInt(numStr[numStr.length - 1]);
+      placeName = language === 'ru' ? 'единиц' : 'ones';
+    } else if (targetPlace === 'tens') {
+      correctAnswer = parseInt(numStr[numStr.length - 2] || '0');
+      placeName = language === 'ru' ? 'десятков' : 'tens';
+    } else if (targetPlace === 'hundreds') {
+      correctAnswer = parseInt(numStr[numStr.length - 3] || '0');
+      placeName = language === 'ru' ? 'сотен' : 'hundreds';
+    } else {
+      correctAnswer = parseInt(numStr[numStr.length - 4] || '0');
+      placeName = language === 'ru' ? 'тысяч' : 'thousands';
+    }
+
+    const wrongAnswers = [
+      correctAnswer + 1,
+      correctAnswer + 2,
+      correctAnswer - 1,
+      parseInt(numStr[numStr.length - (targetPlace === 'tens' ? 1 : 2)] || '0')
+    ].filter(x => x >= 0 && x <= 9 && x !== correctAnswer);
+
+    const choices = rng.shuffle([...wrongAnswers.slice(0, 3), correctAnswer]).map(String);
+
+    return {
+      language,
+      prompt: language === 'ru'
+        ? `В числе ${number}, какая цифра в разряде ${placeName}?`
+        : `In the number ${number}, what digit is in the ${placeName} place?`,
+      choices,
+      correctAnswer: String(correctAnswer),
+      explanation: language === 'ru'
+        ? `В числе ${number} цифра ${correctAnswer} находится в разряде ${placeName}`
+        : `In ${number}, the digit ${correctAnswer} is in the ${placeName} place`,
+      domain: 'Arithmetic',
+      topic: 'Place Value',
+      gradeBand,
+      ageBand: gradeBandToAgeBand(gradeBand),
+      difficultyTier: tier,
+      globalDifficulty: calculateGlobalDifficulty(gradeBand, tier),
+      prerequisites: [],
+      tags: ['arithmetic', 'place-value', 'number-sense']
+    };
+  }
+};
+
+// ==================== MORE GEOMETRY TEMPLATES ====================
+
+const shapesTemplate: QuestionTemplate = {
+  templateId: 'geometry_shapes_identification',
+  domain: 'Geometry',
+  topic: 'Shapes',
+  gradeBands: ['K-1', '2-3', '4-5'],
+  difficultyTiers: [1, 2, 3],
+  prerequisites: [],
+  tags: ['geometry', 'shapes'],
+
+  generate({ seed, gradeBand, tier, language }) {
+    const rng = new SeededRandom(seed);
+
+    const easyShapes = [
+      { ru: 'круг', en: 'circle', sides: 0 },
+      { ru: 'треугольник', en: 'triangle', sides: 3 },
+      { ru: 'квадрат', en: 'square', sides: 4 },
+      { ru: 'прямоугольник', en: 'rectangle', sides: 4 }
+    ];
+
+    const mediumShapes = [
+      ...easyShapes,
+      { ru: 'пятиугольник', en: 'pentagon', sides: 5 },
+      { ru: 'шестиугольник', en: 'hexagon', sides: 6 }
+    ];
+
+    const hardShapes = [
+      ...mediumShapes,
+      { ru: 'восьмиугольник', en: 'octagon', sides: 8 },
+      { ru: 'ромб', en: 'rhombus', sides: 4 }
+    ];
+
+    const shapeList = tier === 1 ? easyShapes : tier === 2 ? mediumShapes : hardShapes;
+    const targetShape = rng.choice(shapeList);
+
+    const wrongShapes = shapeList.filter(s => s !== targetShape);
+    const wrongAnswers = rng.shuffle(wrongShapes).slice(0, 3);
+
+    const choices = rng.shuffle([...wrongAnswers.map(s => language === 'ru' ? s.ru : s.en), language === 'ru' ? targetShape.ru : targetShape.en]);
+
+    return {
+      language,
+      prompt: language === 'ru'
+        ? `Фигура имеет ${targetShape.sides} ${targetShape.sides === 1 ? 'сторону' : targetShape.sides <= 4 ? 'стороны' : 'сторон'}${targetShape.sides === 0 ? ' (это круглая фигура)' : ''}. Что это за фигура?`
+        : `A shape has ${targetShape.sides} side${targetShape.sides !== 1 ? 's' : ''}${targetShape.sides === 0 ? ' (it is round)' : ''}. What shape is it?`,
+      choices,
+      correctAnswer: language === 'ru' ? targetShape.ru : targetShape.en,
+      explanation: language === 'ru'
+        ? `${targetShape.ru} имеет ${targetShape.sides} ${targetShape.sides === 1 ? 'сторону' : targetShape.sides <= 4 ? 'стороны' : 'сторон'}`
+        : `A ${targetShape.en} has ${targetShape.sides} side${targetShape.sides !== 1 ? 's' : ''}`,
+      domain: 'Geometry',
+      topic: 'Shapes',
+      gradeBand,
+      ageBand: gradeBandToAgeBand(gradeBand),
+      difficultyTier: tier,
+      globalDifficulty: calculateGlobalDifficulty(gradeBand, tier),
+      prerequisites: [],
+      tags: ['geometry', 'shapes', 'identification']
+    };
+  }
+};
+
+// ==================== MORE LOGIC TEMPLATES ====================
+
+const sequencesTemplate: QuestionTemplate = {
+  templateId: 'logic_sequences_arithmetic',
+  domain: 'Logic',
+  topic: 'Sequences',
+  gradeBands: ['2-3', '4-5', '6-7'],
+  difficultyTiers: [1, 2, 3, 4, 5],
+  prerequisites: [],
+  tags: ['logic', 'sequences', 'patterns'],
+
+  generate({ seed, gradeBand, tier, language }) {
+    const rng = new SeededRandom(seed);
+
+    // Geometric or arithmetic sequence
+    const isGeometric = tier >= 3 && rng.nextInt(0, 1) === 1;
+
+    if (isGeometric) {
+      const start = rng.nextInt(2, 10);
+      const ratio = tier === 3 ? 2 : tier === 4 ? rng.choice([2, 3]) : rng.choice([2, 3, 4]);
+      const sequence = [start, start * ratio, start * ratio * ratio, start * ratio * ratio * ratio];
+      const correctAnswer = start * Math.pow(ratio, 4);
+
+      const wrongAnswers = [
+        correctAnswer * ratio,
+        correctAnswer / ratio,
+        correctAnswer + sequence[3],
+        sequence[3] + ratio
+      ].filter(x => x !== correctAnswer);
+
+      const choices = rng.shuffle([...wrongAnswers.slice(0, 3), correctAnswer]).map(String);
+
+      return {
+        language,
+        prompt: language === 'ru'
+          ? `Найдите следующее число: ${sequence.join(', ')}, ?`
+          : `Find the next number: ${sequence.join(', ')}, ?`,
+        choices,
+        correctAnswer: String(correctAnswer),
+        explanation: language === 'ru'
+          ? `Последовательность умножается на ${ratio} каждый раз`
+          : `The sequence multiplies by ${ratio} each time`,
+        domain: 'Logic',
+        topic: 'Sequences',
+        gradeBand,
+        ageBand: gradeBandToAgeBand(gradeBand),
+        difficultyTier: tier,
+        globalDifficulty: calculateGlobalDifficulty(gradeBand, tier),
+        prerequisites: [],
+        tags: ['logic', 'sequences', 'geometric']
+      };
+    } else {
+      // Arithmetic sequence (similar to patterns but different progression)
+      const start = rng.nextInt(5, 50);
+      const step = tier === 1 ? rng.nextInt(2, 10) : tier === 2 ? rng.nextInt(5, 20) : rng.nextInt(10, 50);
+      const sequence = [start, start + step, start + 2 * step, start + 3 * step];
+      const correctAnswer = start + 4 * step;
+
+      const wrongAnswers = [
+        correctAnswer + step,
+        correctAnswer - step,
+        correctAnswer + 1,
+        sequence[3] + 1
+      ].filter(x => x !== correctAnswer);
+
+      const choices = rng.shuffle([...wrongAnswers.slice(0, 3), correctAnswer]).map(String);
+
+      return {
+        language,
+        prompt: language === 'ru'
+          ? `Продолжите последовательность: ${sequence.join(', ')}, ?`
+          : `Continue the sequence: ${sequence.join(', ')}, ?`,
+        choices,
+        correctAnswer: String(correctAnswer),
+        explanation: language === 'ru'
+          ? `Каждое число увеличивается на ${step}`
+          : `Each number increases by ${step}`,
+        domain: 'Logic',
+        topic: 'Sequences',
+        gradeBand,
+        ageBand: gradeBandToAgeBand(gradeBand),
+        difficultyTier: tier,
+        globalDifficulty: calculateGlobalDifficulty(gradeBand, tier),
+        prerequisites: [],
+        tags: ['logic', 'sequences', 'arithmetic']
+      };
+    }
+  }
+};
+
+const wordProblemsTemplate: QuestionTemplate = {
+  templateId: 'logic_word_problems_basic',
+  domain: 'Logic',
+  topic: 'Word Problems',
+  gradeBands: ['K-1', '2-3', '4-5', '6-7'],
+  difficultyTiers: [1, 2, 3, 4, 5],
+  prerequisites: [createSkillId('Arithmetic', 'Addition')],
+  tags: ['logic', 'word-problems', 'application'],
+
+  generate({ seed, gradeBand, tier, language }) {
+    const rng = new SeededRandom(seed);
+
+    const maxNum = tier === 1 ? 20 : tier === 2 ? 50 : tier === 3 ? 100 : tier === 4 ? 200 : 500;
+
+    const scenarios = language === 'ru' ? [
+      { thing: 'яблок', action: 'купила', more: 'еще' },
+      { thing: 'книг', action: 'прочитал', more: 'еще' },
+      { thing: 'конфет', action: 'съел', more: 'потом еще' },
+      { thing: 'игрушек', action: 'получил', more: 'и еще' }
+    ] : [
+      { thing: 'apples', action: 'bought', more: 'then' },
+      { thing: 'books', action: 'read', more: 'and then' },
+      { thing: 'candies', action: 'ate', more: 'later' },
+      { thing: 'toys', action: 'got', more: 'and' }
+    ];
+
+    const scenario = rng.choice(scenarios);
+    const first = rng.nextInt(5, maxNum / 2);
+    const second = rng.nextInt(5, maxNum / 2);
+    const correctAnswer = first + second;
+
+    const wrongAnswers = [
+      correctAnswer + rng.nextInt(1, 10),
+      correctAnswer - rng.nextInt(1, 10),
+      Math.abs(first - second),
+      first + second + first
+    ].filter(x => x > 0 && x !== correctAnswer);
+
+    const choices = rng.shuffle([...wrongAnswers.slice(0, 3), correctAnswer]).map(String);
+
+    return {
+      language,
+      prompt: language === 'ru'
+        ? `Маша ${scenario.action} ${first} ${scenario.thing}, ${scenario.more} ${scenario.action} ${second} ${scenario.thing}. Сколько всего ${scenario.thing} у Маши?`
+        : `Masha ${scenario.action} ${first} ${scenario.thing}, ${scenario.more} ${scenario.action} ${second} ${scenario.thing}. How many ${scenario.thing} does Masha have in total?`,
+      choices,
+      correctAnswer: String(correctAnswer),
+      explanation: language === 'ru'
+        ? `${first} + ${second} = ${correctAnswer} ${scenario.thing}`
+        : `${first} + ${second} = ${correctAnswer} ${scenario.thing}`,
+      domain: 'Logic',
+      topic: 'Word Problems',
+      gradeBand,
+      ageBand: gradeBandToAgeBand(gradeBand),
+      difficultyTier: tier,
+      globalDifficulty: calculateGlobalDifficulty(gradeBand, tier),
+      prerequisites: [createSkillId('Arithmetic', 'Addition')],
+      tags: ['logic', 'word-problems', 'addition']
+    };
+  }
+};
+
 // ==================== TEMPLATE REGISTRY ====================
 
 const ALL_TEMPLATES: QuestionTemplate[] = [
@@ -484,7 +915,14 @@ const ALL_TEMPLATES: QuestionTemplate[] = [
   divisionTemplate,
   perimeterTemplate,
   areaTemplate,
-  patternsTemplate
+  patternsTemplate,
+  countingTemplate,
+  fractionsTemplate,
+  decimalsTemplate,
+  placeValueTemplate,
+  shapesTemplate,
+  sequencesTemplate,
+  wordProblemsTemplate
 ];
 
 // ==================== GENERATOR API ====================

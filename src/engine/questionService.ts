@@ -37,7 +37,7 @@ import { validateAndLog, assertTopicFidelity } from './questionValidator';
 // ==================== STORAGE KEYS ====================
 
 const STATS_STORAGE_KEY = 'mathbot_skill_stats_v1';
-const QUESTION_BANK_KEY = 'mathbot_question_bank_v1';
+const QUESTION_BANK_KEY = 'mathbot_question_bank_v2'; // v2: Added 7 new templates (counting, fractions, decimals, placeValue, shapes, sequences, wordProblems)
 const MASTERED_SKILLS_KEY = 'mathbot_mastered_skills_v1';
 
 // ==================== SINGLETON SERVICE ====================
@@ -309,6 +309,66 @@ class QuestionService {
   async isSkillMastered(skillId: SkillId): Promise<boolean> {
     await this.initialize();
     return this.masteredSkills.has(skillId);
+  }
+
+  /**
+   * Count available questions for a skill
+   */
+  async countQuestionsForSkill(skillId: SkillId, userAge?: number): Promise<number> {
+    await this.initialize();
+
+    const gradeBand = userAge ? ageToGradeBand(userAge) : undefined;
+
+    return this.questionBank.filter(q => {
+      const matchesSkill = q.skillId === skillId;
+      const matchesGrade = !gradeBand || q.gradeBand === gradeBand;
+      return matchesSkill && matchesGrade;
+    }).length;
+  }
+
+  /**
+   * Count available questions by domain and topic
+   */
+  async countQuestionsByTopic(
+    domain: string,
+    topic: string,
+    userAge?: number
+  ): Promise<number> {
+    await this.initialize();
+
+    const gradeBand = userAge ? ageToGradeBand(userAge) : undefined;
+    const domainNormalized = domain.charAt(0).toUpperCase() + domain.slice(1);
+
+    return this.questionBank.filter(q => {
+      const matchesDomain = q.domain === domainNormalized;
+      const matchesTopic = q.topic === topic;
+      const matchesGrade = !gradeBand || q.gradeBand === gradeBand;
+      return matchesDomain && matchesTopic && matchesGrade;
+    }).length;
+  }
+
+  /**
+   * Get question bank statistics
+   */
+  async getQuestionBankStats() {
+    await this.initialize();
+
+    const byDomain: Record<string, number> = {};
+    const byTopic: Record<string, number> = {};
+    const byGrade: Record<string, number> = {};
+
+    this.questionBank.forEach(q => {
+      byDomain[q.domain] = (byDomain[q.domain] || 0) + 1;
+      byTopic[q.topic] = (byTopic[q.topic] || 0) + 1;
+      byGrade[q.gradeBand] = (byGrade[q.gradeBand] || 0) + 1;
+    });
+
+    return {
+      total: this.questionBank.length,
+      byDomain,
+      byTopic,
+      byGrade
+    };
   }
 
   /**
