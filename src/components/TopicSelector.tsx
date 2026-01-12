@@ -3,12 +3,14 @@
  * Displays CCSS-aligned topic tree for age-appropriate selection
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronRight, BookOpen, Target, Star } from 'lucide-react';
 import { getAllTopicsForGrade } from '../engine/curriculumMap';
 import { ageToGrade } from '../engine/questionEngineAdapter';
 import { useI18n } from '../i18n/context';
+import { questionService } from '../engine/questionService';
+import { getQuestionTopicFromUI } from '../engine/topicMapping';
 
 interface TopicSelectorProps {
   userAge: number;
@@ -26,11 +28,49 @@ export const TopicSelector: React.FC<TopicSelectorProps> = ({
   const { t, language } = useI18n();
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [questionCounts, setQuestionCounts] = useState<Record<string, number>>({});
 
   const grade = ageToGrade(userAge);
   const availableTopics = useMemo(() => {
     return getAllTopicsForGrade(grade);
   }, [grade]);
+
+  // Load question counts for all topics
+  useEffect(() => {
+    const loadQuestionCounts = async () => {
+      const counts: Record<string, number> = {};
+
+      for (const topic of availableTopics) {
+        const topicName = language === 'ru' ? topic.name.ru : topic.name.en;
+        const englishTopic = getQuestionTopicFromUI(topicName);
+
+        if (englishTopic) {
+          try {
+            // Get domain from topic  structure (you may need to adjust based on your data)
+            const domain = topic.domain === 'OA' || topic.domain === 'NBT' || topic.domain === 'NF' ? 'Arithmetic'
+              : topic.domain === 'G' ? 'Geometry'
+              : 'Logic';
+
+            const count = await questionService.countQuestionsByTopic(
+              domain.toLowerCase() as any,
+              englishTopic,
+              userAge
+            );
+            counts[topic.id] = count;
+          } catch (error) {
+            console.error(`Failed to count questions for ${topicName}:`, error);
+            counts[topic.id] = 0;
+          }
+        } else {
+          counts[topic.id] = 0;
+        }
+      }
+
+      setQuestionCounts(counts);
+    };
+
+    loadQuestionCounts();
+  }, [availableTopics, userAge, language]);
 
   const toggleTopic = (topicId: string) => {
     setExpandedTopics(prev => {
@@ -138,9 +178,20 @@ export const TopicSelector: React.FC<TopicSelectorProps> = ({
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
-                            <h3 className="font-semibold text-white group-hover:text-purple-300 transition-colors">
-                              {language === 'ru' ? topic.name.ru : topic.name.en}
-                            </h3>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-white group-hover:text-purple-300 transition-colors">
+                                {language === 'ru' ? topic.name.ru : topic.name.en}
+                              </h3>
+                              {questionCounts[topic.id] !== undefined && (
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                  questionCounts[topic.id] > 0
+                                    ? 'bg-green-500/20 text-green-300'
+                                    : 'bg-red-500/20 text-red-300'
+                                }`}>
+                                  {questionCounts[topic.id]} {language === 'ru' ? 'вопр.' : 'qs'}
+                                </span>
+                              )}
+                            </div>
                             {topic.ccssCode && (
                               <p className="text-xs text-gray-400 mt-1">
                                 CCSS: {topic.ccssCode}

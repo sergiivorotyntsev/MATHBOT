@@ -54,6 +54,7 @@ import { questionService } from './engine/questionService';
 import { questionsToTasks, getSkillIdFromTask, logSessionSummary, TaskWithOptions as AdapterTaskWithOptions } from './engine/questionAdapter';
 import type { SkillId } from './types/question';
 import { createSkillId, QuestionDomain, QuestionTopic } from './types/question';
+import { getQuestionTopicFromUI } from './engine/topicMapping';
 
 // ==================== TYPES ====================
 
@@ -511,12 +512,27 @@ const MathBotArena: React.FC = () => {
       // Build SkillId from domain/topic/subtopic
       let focusSkillId: SkillId;
       if (topic) {
+        // Convert Russian topic name to English QuestionTopic
+        const questionTopic = getQuestionTopicFromUI(topic);
+
+        if (!questionTopic) {
+          console.error(`[Session] No mapping found for topic: "${topic}"`);
+          setShowModal({
+            type: 'error',
+            message: `❌ Ошибка маппинга темы\n\nТема "${topic}" не найдена в банке вопросов.\n\nПопробуйте другую тему или режим "Рекомендованные".`
+          });
+          return;
+        }
+
+        console.log(`[Session] Topic mapping: "${topic}" → "${questionTopic}"`);
+
         // Map domain (skillType) to proper QuestionDomain
         const domain = skillType.charAt(0).toUpperCase() + skillType.slice(1) as QuestionDomain;
+
         // Create skillId: domain_topic or domain_topic_subtopic
         focusSkillId = subtopic
-          ? createSkillId(domain, topic as QuestionTopic, subtopic)
-          : createSkillId(domain, topic as QuestionTopic);
+          ? createSkillId(domain, questionTopic, subtopic)
+          : createSkillId(domain, questionTopic);
 
         console.log(`[Session] Focused session on skill: ${focusSkillId}`);
 
@@ -530,10 +546,10 @@ const MathBotArena: React.FC = () => {
 
         // Check if we got questions for this skill
         if (sessionPlan.questions.length === 0) {
-          // Get available count for debugging
+          // Get available count for debugging (use English topic name)
           const availableCount = await questionService.countQuestionsByTopic(
             skillType,
-            topic,
+            questionTopic, // Use mapped English name
             userData.age
           );
 
