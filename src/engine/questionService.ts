@@ -372,7 +372,8 @@ export const questionService = new QuestionService();
 export {
   Question,
   SkillId,
-  QuestionLanguage,
-  SessionPlan,
-  AnswerEvent
+  QuestionLanguage
 } from '../types/question';
+
+export { SessionPlan } from './sessionBuilder';
+export { AnswerEvent } from '../types/skillStats';
