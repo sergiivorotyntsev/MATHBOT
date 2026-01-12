@@ -369,11 +369,11 @@ export const questionService = new QuestionService();
 
 // ==================== CONVENIENCE EXPORTS ====================
 
-export {
+export type {
   Question,
   SkillId,
   QuestionLanguage
 } from '../types/question';
 
-export { SessionPlan } from './sessionBuilder';
-export { AnswerEvent } from '../types/skillStats';
+export type { SessionPlan } from './sessionBuilder';
+export type { AnswerEvent } from '../types/skillStats';
