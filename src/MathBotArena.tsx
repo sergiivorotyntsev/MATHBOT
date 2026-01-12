@@ -31,6 +31,7 @@ import { AvatarView } from './avatar/AvatarView';
 import { SkillsDashboard } from './avatar/SkillsDashboard.v3';
 import { ProgressTab } from './components/ProgressTab';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
+import { PlayerHeader } from './components/PlayerHeader';
 import { calculateScore } from './scoring/scoring';
 import { calculateSkillGains, applySkillGains } from './skills/skillGain';
 import { applySkillDecay, getDecayWarning } from './skills/skillDecay';
@@ -940,58 +941,14 @@ const MathBotArena: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Player Stats */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="bg-slate-800 rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 flex justify-between items-center flex-wrap gap-4 shadow-xl"
-        >
-          <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Star className="w-5 h-5 text-yellow-400" />
-              <span className="font-bold text-sm sm:text-base">Ур. {playerBot.level}</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-orange-400" />
-              <div className="flex flex-col">
-                <span className="text-xs text-gray-400">XP</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-24 h-2 bg-slate-700 rounded-full overflow-hidden">
-                    <motion.div
-                      className="h-full bg-gradient-to-r from-yellow-400 to-orange-400"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${xpProgress}%` }}
-                    />
-                  </div>
-                  <span className="text-xs">{playerBot.totalXP}/{xpForNextLevel}</span>
-                </div>
-              </div>
-            </div>
-
-            <AnimatePresence>
-              {combo > 0 && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0 }}
-                  className="flex items-center gap-2 animate-pulse"
-                >
-                  <Flame className="w-5 h-5 text-red-400" />
-                  <span className="font-bold text-red-400">x{combo}</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <button
-            onClick={() => setActiveTab('account')}
-            className="bg-slate-700 p-3 rounded-lg hover:bg-slate-600 active:scale-95 transition-all"
-            style={{ minHeight: '44px', minWidth: '44px' }} // ✅ Touch target
-          >
-            <Settings className="w-6 h-6" />
-          </button>
-        </motion.div>
+        {/* Player Header with Avatar and Stats */}
+        <PlayerHeader
+          name={userData?.name || 'Player'}
+          level={playerBot.level}
+          totalXP={playerBot.totalXP}
+          combo={combo}
+          avatarProfile={playerBot.avatarProfile}
+        />
 
         {/* Tabs */}
         <div className="flex gap-2 mb-4 sm:mb-6 flex-wrap">
