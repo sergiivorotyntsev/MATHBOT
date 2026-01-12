@@ -14,6 +14,8 @@ interface PlayerHeaderProps {
   totalXP: number;
   combo?: number;
   avatarProfile?: AvatarProfile;
+  xpProgress?: number; // Pre-calculated progress percentage
+  xpToNextLevel?: number; // XP remaining to next level
 }
 
 export const PlayerHeader: React.FC<PlayerHeaderProps> = ({
@@ -21,15 +23,11 @@ export const PlayerHeader: React.FC<PlayerHeaderProps> = ({
   level,
   totalXP,
   combo = 0,
-  avatarProfile
+  avatarProfile,
+  xpProgress = 0,
+  xpToNextLevel = 0
 }) => {
   const { t } = useI18n();
-
-  // Calculate XP progress within current level
-  const xpForCurrentLevel = level * 100;
-  const xpForNextLevel = (level + 1) * 100;
-  const xpInCurrentLevel = totalXP - xpForCurrentLevel;
-  const xpProgress = (xpInCurrentLevel / 100) * 100;
 
   // Get top 3 math skills
   const topSkills = avatarProfile

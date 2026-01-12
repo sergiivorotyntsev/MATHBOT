@@ -6,7 +6,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronRight, BookOpen, Target, Star } from 'lucide-react';
-import { CURRICULUM_TREE, getTopicsForGrade } from '../engine/curriculumMap';
+import { getAllTopicsForGrade } from '../engine/curriculumMap';
 import { ageToGrade } from '../engine/questionEngineAdapter';
 import { useI18n } from '../i18n/context';
 
@@ -29,7 +29,7 @@ export const TopicSelector: React.FC<TopicSelectorProps> = ({
 
   const grade = ageToGrade(userAge);
   const availableTopics = useMemo(() => {
-    return getTopicsForGrade(grade);
+    return getAllTopicsForGrade(grade);
   }, [grade]);
 
   const toggleTopic = (topicId: string) => {

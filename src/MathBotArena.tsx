@@ -32,6 +32,8 @@ import { SkillsDashboard } from './avatar/SkillsDashboard.v3';
 import { ProgressTab } from './components/ProgressTab';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { PlayerHeader } from './components/PlayerHeader';
+import { EditableProfile } from './components/EditableProfile';
+import { TrainingDashboard } from './components/TrainingDashboard';
 import { calculateScore } from './scoring/scoring';
 import { calculateSkillGains, applySkillGains } from './skills/skillGain';
 import { applySkillDecay, getDecayWarning } from './skills/skillDecay';
@@ -764,13 +766,38 @@ const MathBotArena: React.FC = () => {
     return userData ? AGE_CATEGORIES[getAgeCategory(userData.age)] : null;
   }, [userData]);
 
-  const xpForNextLevel = useMemo(() => {
-    return calculateXPForNextLevel(playerBot.level);
-  }, [playerBot.level]);
+  // XP calculations fixed: calculate progress within current level
+  const { xpForNextLevel, xpInCurrentLevel, xpProgress, xpToNextLevel } = useMemo(() => {
+    const currentLevel = playerBot.level;
+    const totalXP = playerBot.totalXP;
 
-  const xpProgress = useMemo(() => {
-    return (playerBot.totalXP / xpForNextLevel) * 100;
-  }, [playerBot.totalXP, xpForNextLevel]);
+    // XP required to REACH current level
+    const xpForCurrentLevel = currentLevel > 1
+      ? calculateXPForNextLevel(currentLevel - 1)
+      : 0;
+
+    // XP required to REACH next level
+    const xpForNext = calculateXPForNextLevel(currentLevel);
+
+    // XP within current level (between current and next threshold)
+    const xpInLevel = totalXP - xpForCurrentLevel;
+
+    // XP required to level up (difference between thresholds)
+    const xpRequired = xpForNext - xpForCurrentLevel;
+
+    // Progress percentage (0-100)
+    const progress = Math.min(100, Math.max(0, (xpInLevel / xpRequired) * 100));
+
+    // XP remaining to next level
+    const xpRemaining = Math.max(0, xpForNext - totalXP);
+
+    return {
+      xpForNextLevel: xpForNext,
+      xpInCurrentLevel: xpInLevel,
+      xpProgress: progress,
+      xpToNextLevel: xpRemaining
+    };
+  }, [playerBot.level, playerBot.totalXP]);
 
   // ==================== RENDER: WELCOME SCREEN ====================
 
@@ -945,6 +972,8 @@ const MathBotArena: React.FC = () => {
           totalXP={playerBot.totalXP}
           combo={combo}
           avatarProfile={playerBot.avatarProfile}
+          xpProgress={xpProgress}
+          xpToNextLevel={xpToNextLevel}
         />
 
         {/* Tabs */}
@@ -971,59 +1000,23 @@ const MathBotArena: React.FC = () => {
 
         {/* Content Area */}
         <AnimatePresence mode="wait">
-          {/* Training Selection */}
-          {activeTab === 'training' && !session.active && (
+          {/* Training Dashboard - New Question Engine based UI */}
+          {activeTab === 'training' && !session.active && userData && (
             <motion.div
-              key="skill-selection"
+              key="training-dashboard"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
             >
-              <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 sm:p-6 mb-6 shadow-xl">
-                <h2 className="text-xl sm:text-2xl font-bold mb-2">
-                  {t('session.trainingMode')}
-                </h2>
-                <p className="text-sm sm:text-base">
-                  {t('session.trainingDesc')}
-                </p>
-              </div>
-
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(Object.entries(SKILLS) as [SkillType, typeof SKILLS[SkillType]][]).map(([id, skill]) => {
-                  const stats = playerBot.statistics.skillStats[id];
-                  const accuracy = stats.total > 0 ? (stats.correct / stats.total) * 100 : 0;
-
-                  return (
-                    <motion.button
-                      key={id}
-                      onClick={() => startSession(id, 'training')}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className={`bg-slate-800 rounded-lg p-6 sm:p-8 transition-all shadow-xl hover:shadow-2xl border-2 border-transparent hover:border-purple-500`}
-                      style={{ minHeight: '44px' }} // ✅ Touch target
-                    >
-                      <div className="text-4xl sm:text-5xl mb-4">{skill.icon}</div>
-                      <h3 className="text-xl sm:text-2xl font-bold mb-2">{skill.name}</h3>
-
-                      <div className="text-yellow-400 mt-4 text-sm sm:text-base">
-                        {currentAgeCategory?.questions} {t('taskUI.tasks')} • {t('taskUI.level')} {stats.level}
-                      </div>
-
-                      {stats.total > 0 && (
-                        <div className="mt-3 text-xs sm:text-sm text-gray-400">
-                          {t('taskUI.solved')}: {stats.total} | {t('taskUI.accuracy')}: {accuracy.toFixed(0)}%
-                        </div>
-                      )}
-
-                      {stats.errorTopics.length > 0 && (
-                        <div className="mt-2 text-xs text-red-400">
-                          {t('taskUI.needsAttention')}: {stats.errorTopics.slice(0, 2).join(', ')}
-                        </div>
-                      )}
-                    </motion.button>
-                  );
-                })}
-              </div>
+              <TrainingDashboard
+                userAge={userData.age}
+                userId={userData.email}
+                onStartTraining={(skillType, topic, subtopic) => {
+                  // Start training with optional topic/subtopic filters
+                  startSession(skillType, 'training');
+                }}
+                skillStats={playerBot.statistics.skillStats}
+              />
             </motion.div>
           )}
 
@@ -1374,97 +1367,27 @@ const MathBotArena: React.FC = () => {
           )}
 
           {/* Account Tab */}
-          {activeTab === 'account' && (
-            <motion.div
-              key="account"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="bg-slate-800 rounded-lg p-4 sm:p-8 shadow-2xl"
-            >
-              <h2 className="text-2xl sm:text-3xl font-bold mb-6 flex items-center gap-3">
-                <User className="w-6 h-6 sm:w-8 sm:h-8" />
-                {t('nav.profile')}
-              </h2>
-
-              {/* Large Avatar Display */}
-              {playerBot.avatarProfile && (
-                <div className="flex justify-center mb-6">
-                  <AvatarView
-                    avatar={playerBot.avatarProfile}
-                    size="large"
-                    animate={true}
-                  />
-                </div>
-              )}
-
-              <div className="space-y-3 sm:space-y-4">
-                <div className="bg-slate-700 rounded-lg p-4 sm:p-6">
-                  <div className="text-gray-400 mb-1 text-sm">Имя:</div>
-                  <div className="text-xl sm:text-2xl font-bold">{userData?.name}</div>
-                </div>
-
-                <div className="bg-slate-700 rounded-lg p-4 sm:p-6">
-                  <div className="text-gray-400 mb-1 text-sm">Возраст:</div>
-                  <div className="text-xl sm:text-2xl font-bold">{userData?.age} лет</div>
-                </div>
-
-                <div className="bg-slate-700 rounded-lg p-4 sm:p-6">
-                  <div className="text-gray-400 mb-1 text-sm">Email:</div>
-                  <div className="text-xl sm:text-2xl font-bold break-all">{userData?.email}</div>
-                </div>
-
-                <div className="bg-slate-700 rounded-lg p-4 sm:p-6">
-                  <div className="text-gray-400 mb-1 text-sm">Категория:</div>
-                  <div className="text-xl sm:text-2xl font-bold">
-                    {currentAgeCategory?.icon} {currentAgeCategory?.name}
-                  </div>
-                </div>
-
-                <div className="bg-slate-700 rounded-lg p-4 sm:p-6">
-                  <div className="text-gray-400 mb-1 text-sm">Уровень героя:</div>
-                  <div className="text-xl sm:text-2xl font-bold text-yellow-400">Ур. {playerBot.level}</div>
-                </div>
-
-                <div className="bg-slate-700 rounded-lg p-4 sm:p-6">
-                  <div className="text-gray-400 mb-1 text-sm">Опыт:</div>
-                  <div className="text-xl sm:text-2xl font-bold text-purple-400">{playerBot.totalXP} XP</div>
-                  <div className="text-xs sm:text-sm text-gray-400 mt-1">
-                    До следующего уровня: {xpForNextLevel - playerBot.totalXP} XP
-                  </div>
-                  <div className="w-full h-2 bg-slate-600 rounded-full overflow-hidden mt-2">
-                    <div
-                      className="h-full bg-gradient-to-r from-yellow-400 to-orange-400"
-                      style={{ width: `${xpProgress}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="bg-slate-700 rounded-lg p-4 sm:p-6">
-                  <div className="text-gray-400 mb-1 text-sm">Всего сессий:</div>
-                  <div className="text-xl sm:text-2xl font-bold">{playerBot.statistics.sessions}</div>
-                </div>
-
-                <div className="bg-slate-700 rounded-lg p-4 sm:p-6">
-                  <div className="text-gray-400 mb-1 text-sm">Общее время игры:</div>
-                  <div className="text-xl sm:text-2xl font-bold">
-                    {Math.floor(playerBot.statistics.totalPlayTime / 3600)}ч {Math.floor((playerBot.statistics.totalPlayTime % 3600) / 60)}м
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={() => {
-                  if (confirm('Вы уверены? Весь прогресс будет удалён.')) {
-                    localStorage.removeItem(STORAGE_KEY);
-                    window.location.reload();
-                  }
-                }}
-                className="mt-6 w-full bg-red-600 hover:bg-red-500 px-6 py-4 rounded-lg font-bold transition-all"
-                style={{ minHeight: '44px' }}
-              >
-                🗑️ Сбросить прогресс
-              </button>
-            </motion.div>
+          {activeTab === 'account' && userData && (
+            <EditableProfile
+              userData={userData}
+              avatarProfile={playerBot.avatarProfile}
+              level={playerBot.level}
+              totalXP={playerBot.totalXP}
+              xpProgress={xpProgress}
+              xpToNextLevel={xpToNextLevel}
+              sessions={playerBot.statistics.sessions}
+              totalPlayTime={playerBot.statistics.totalPlayTime}
+              calculateXPForNextLevel={calculateXPForNextLevel}
+              onSave={(updated) => {
+                const newUserData = { ...userData, ...updated };
+                setUserData(newUserData);
+                // Trigger any necessary recalculations if age changed
+                if (updated.age && updated.age !== userData.age) {
+                  // Age changed - could trigger curriculum refresh
+                  console.log('Age changed to', updated.age, 'triggering curriculum refresh');
+                }
+              }}
+            />
           )}
         </AnimatePresence>
       </div>
