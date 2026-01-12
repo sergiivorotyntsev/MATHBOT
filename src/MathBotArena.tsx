@@ -20,7 +20,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Trophy, Star, Clock, User, Settings, Flame, BookOpen, BarChart3, ArrowLeft, Lightbulb, Swords, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { taskBank, Task, SkillType, getRandomTask } from './data/taskBank';
+import { taskBank, Task, SkillType } from './data/taskBank';
 import { methodologyGuides, getGuideByTopic } from './data/methodologyGuides';
 import { BattleArena } from './components/BattleArena';
 import { createBattleHero } from './battle/battleMechanics';
@@ -109,7 +109,6 @@ interface FeedbackData {
 
 // Build marker for debugging (updated with Avatar System: 2026-01-11)
 const BUILD_TAG = 'v2.1-AVATAR-SKILLS';
-const BUILD_DATE = '2026-01-11';
 
 const AGE_CATEGORIES = {
   '6-7': { name: 'Юные Исследователи', icon: '🔬', questions: 10 },
@@ -208,27 +207,6 @@ const generateAnswerOptions = (correctAnswer: number): number[] => {
 
   // Перемешиваем
   return Array.from(options).sort(() => Math.random() - 0.5);
-};
-
-/**
- * Расчёт XP с модификаторами
- */
-const calculateXPReward = (
-  baseXP: number,
-  combo: number,
-  timeTaken: number,
-  timeLimit: number,
-  difficulty: number,
-  superSkillActive: boolean = false
-): number => {
-  const comboBonus = combo > 0 ? combo * 5 : 0;
-  const timeBonus = Math.max(0, Math.floor((timeLimit - timeTaken) / 2));
-  const difficultyMultiplier = 1.0 + (difficulty * 0.15);
-  const superSkillMultiplier = superSkillActive ? 1.5 : 1.0;
-
-  return Math.floor(
-    (baseXP + comboBonus + timeBonus) * difficultyMultiplier * superSkillMultiplier
-  );
 };
 
 // ==================== LOCAL STORAGE ====================
@@ -478,7 +456,6 @@ const MathBotArena: React.FC = () => {
     setIsTimerActive(false);
     const timeTaken = Math.floor((Date.now() - answerStartTime) / 1000);
     const correct = answer === currentTask.a;
-    const baseXP = 15;
 
     if (correct) {
       const newCombo = combo + 1;
