@@ -834,18 +834,53 @@ const MathBotArena: React.FC = () => {
     setFeedback(null);
     const nextIndex = session.currentQ + 1;
 
+    // Check if session should end
     if (nextIndex >= session.totalQ) {
+      console.log('[State Machine] Session complete, showing results');
       finishSession();
-    } else {
-      const nextTask = session.questions[nextIndex];
-      setSession(prev => ({ ...prev, currentQ: nextIndex }));
-      setCurrentTask(nextTask);
+      return;
+    }
 
-      if (session.mode === 'training') {
-        setTimeLeft(nextTask.time || 45);
-        setIsTimerActive(true);
-        setAnswerStartTime(Date.now());
-      }
+    // DEFENSIVE CHECK: Validate next task exists
+    const nextTask = session.questions[nextIndex];
+    if (!nextTask) {
+      console.error(`[State Machine] CRITICAL: No task at index ${nextIndex}/${session.totalQ}`);
+      console.error('[State Machine] Questions array:', session.questions?.length || 0);
+      console.error('[State Machine] Ending session gracefully to prevent blank screen');
+
+      setShowModal({
+        type: 'error',
+        message: `⚠️ Ошибка загрузки вопроса\n\nПопытка загрузить вопрос ${nextIndex + 1}/${session.totalQ} не удалась.\n\nСессия будет завершена с текущим прогрессом.`
+      });
+
+      finishSession();
+      return;
+    }
+
+    // DEFENSIVE CHECK: Validate task has required fields
+    if (!nextTask.q || !nextTask.options || nextTask.options.length === 0) {
+      console.error('[State Machine] CRITICAL: Malformed task at index', nextIndex, nextTask);
+
+      setShowModal({
+        type: 'error',
+        message: `⚠️ Некорректный вопрос\n\nВопрос ${nextIndex + 1} повреждён.\n\nПропускаем его и продолжаем...`
+      });
+
+      // Try to skip to next question
+      setSession(prev => ({ ...prev, currentQ: nextIndex }));
+      setTimeout(() => nextQuestion(), 1000);
+      return;
+    }
+
+    // All checks passed, proceed normally
+    console.log(`[State Machine] Loading question ${nextIndex + 1}/${session.totalQ}`, nextTask._skillId);
+    setSession(prev => ({ ...prev, currentQ: nextIndex }));
+    setCurrentTask(nextTask);
+
+    if (session.mode === 'training') {
+      setTimeLeft(nextTask.time || 45);
+      setIsTimerActive(true);
+      setAnswerStartTime(Date.now());
     }
   }, [session]);
 
@@ -1273,6 +1308,40 @@ const MathBotArena: React.FC = () => {
                 }}
                 skillStats={playerBot.statistics.skillStats}
               />
+            </motion.div>
+          )}
+
+          {/* DEFENSIVE: Session active but no currentTask = error state */}
+          {session.active && !currentTask && (
+            <motion.div
+              key="error-state"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="bg-red-900/20 border border-red-500 rounded-lg p-8 text-center"
+            >
+              <div className="text-2xl font-bold text-red-400 mb-4">
+                ⚠️ {language === 'ru' ? 'Ошибка загрузки вопроса' : 'Error Loading Question'}
+              </div>
+              <div className="text-lg mb-6">
+                {language === 'ru'
+                  ? 'Произошла ошибка при загрузке следующего вопроса. Это не должно было случиться!'
+                  : 'An error occurred while loading the next question. This should not have happened!'}
+              </div>
+              <div className="text-sm text-gray-400 mb-6">
+                {language === 'ru'
+                  ? 'Текущий вопрос: '
+                  : 'Current question: '}
+                {session.currentQ + 1}/{session.totalQ}
+              </div>
+              <button
+                onClick={() => {
+                  console.error('[UI Recovery] User manually ending broken session');
+                  finishSession();
+                }}
+                className="bg-red-600 hover:bg-red-500 px-6 py-3 rounded-lg font-bold transition-all"
+              >
+                {language === 'ru' ? '🏁 Завершить сессию' : '🏁 End Session'}
+              </button>
             </motion.div>
           )}
 
