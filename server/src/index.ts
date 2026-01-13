@@ -9,12 +9,26 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+
+// Import routes
+import skillsRouter from './routes/skills';
+import questionsRouter from './routes/questions';
+import sessionsRouter from './routes/sessions';
+import attemptsRouter from './routes/attempts';
+import usersRouter from './routes/users';
+import adminRouter from './routes/admin';
 
 // Load environment variables
 dotenv.config();
 
-// Initialize Prisma Client
+// Initialize Prisma Client with SQLite adapter
+const adapter = new PrismaBetterSqlite3({
+  url: process.env.DATABASE_URL || 'file:./dev.db',
+});
+
 export const prisma = new PrismaClient({
+  adapter,
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 });
 
@@ -52,13 +66,13 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// API routes (to be added)
-// app.use('/api/skills', skillsRouter);
-// app.use('/api/questions', questionsRouter);
-// app.use('/api/sessions', sessionsRouter);
-// app.use('/api/attempts', attemptsRouter);
-// app.use('/api/users', usersRouter);
-// app.use('/api/admin', adminRouter);
+// API routes
+app.use('/api/skills', skillsRouter);
+app.use('/api/questions', questionsRouter);
+app.use('/api/sessions', sessionsRouter);
+app.use('/api/attempts', attemptsRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/admin', adminRouter);
 
 // ==================== ERROR HANDLING ====================
 

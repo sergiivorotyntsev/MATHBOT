@@ -37,7 +37,8 @@ export const UpdateSkillSchema = CreateSkillSchema.partial().omit({ id: true });
 
 // ==================== QUESTION SCHEMAS ====================
 
-export const CreateQuestionSchema = z.object({
+// Base schema without refinements (for UpdateQuestionSchema)
+const BaseQuestionSchema = z.object({
   skillId: z.string(),
   domain: DomainSchema,
   topic: z.string().min(1),
@@ -58,15 +59,25 @@ export const CreateQuestionSchema = z.object({
   format: QuestionFormatSchema.default('mcq'),
   tags: z.array(z.string()).default([]),
   version: z.number().int().positive().default(1),
-}).refine((data) => data.choices.includes(data.correct), {
-  message: 'Correct answer must be one of the choices',
-  path: ['correct'],
-}).refine((data) => data.ageMin <= data.ageMax, {
-  message: 'ageMin must be <= ageMax',
-  path: ['ageMin'],
 });
 
-export const UpdateQuestionSchema = CreateQuestionSchema.partial();
+// CreateQuestionSchema with refinements
+export const CreateQuestionSchema = BaseQuestionSchema.refine(
+  (data) => data.choices.includes(data.correct),
+  {
+    message: 'Correct answer must be one of the choices',
+    path: ['correct'],
+  }
+).refine(
+  (data) => data.ageMin <= data.ageMax,
+  {
+    message: 'ageMin must be <= ageMax',
+    path: ['ageMin'],
+  }
+);
+
+// UpdateQuestionSchema without refinements (partial of base schema)
+export const UpdateQuestionSchema = BaseQuestionSchema.partial();
 
 export const BulkImportQuestionSchema = z.array(CreateQuestionSchema);
 

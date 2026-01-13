@@ -6,17 +6,26 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:server": "cd server && npm run dev",
+    "dev:server": "nodemon --exec tsx server/src/index.ts",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\"",
     "validate": "tsx scripts/validateQuestionBank.ts",
     "build": "npm run validate && vite build",
     "build:questionbank": "tsx scripts/buildQuestionBank.ts",
     "preview": "vite preview",
     "lint": "eslint src --ext ts,tsx",
     "test": "vitest && npm run validate",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:migrate-questions": "tsx prisma/migrate-questions.ts",
+    "db:studio": "prisma studio",
+    "db:reset": "prisma migrate reset"
   },
   "dependencies": {
+    "@prisma/adapter-better-sqlite3": "^7.2.0",
     "@prisma/client": "^7.2.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "better-sqlite3": "^12.6.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
