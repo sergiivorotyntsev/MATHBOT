@@ -53,9 +53,9 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.props.onReset) {
       this.props.onReset();
     }
-  };
+  }
 
-  handleReturnHome = (): void {
+  handleReturnHome = (): void => {
     this.setState({
       hasError: false,
       error: null,
@@ -64,7 +64,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
     // Reload page to reset state
     window.location.href = '/';
-  };
+  }
 
   render(): ReactNode {
     if (this.state.hasError) {
