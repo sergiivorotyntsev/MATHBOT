@@ -75,6 +75,54 @@ function hashString(str: string): number {
   return Math.abs(hash);
 }
 
+/**
+ * Ensure unique choices by removing duplicates
+ * If not enough unique choices, generate more wrong answers
+ */
+function ensureUniqueChoices<T extends number | string>(
+  correctAnswer: T,
+  wrongAnswers: T[],
+  count: number = 3
+): T[] {
+  // Remove duplicates from wrong answers
+  const uniqueWrong = Array.from(new Set(wrongAnswers.filter(x => x !== correctAnswer)));
+
+  // If we have enough unique wrong answers, return them
+  if (uniqueWrong.length >= count) {
+    return uniqueWrong.slice(0, count);
+  }
+
+  // If not enough, warn and return what we have (duplicates will be filtered in shuffle)
+  if (uniqueWrong.length > 0) {
+    console.warn(`Not enough unique wrong answers: have ${uniqueWrong.length}, need ${count}`);
+    return uniqueWrong;
+  }
+
+  // Last resort: generate simple variations (for numeric answers only)
+  if (typeof correctAnswer === 'number') {
+    const result: T[] = [];
+    let offset = 1;
+    while (result.length < count) {
+      const candidate1 = (correctAnswer + offset) as T;
+      const candidate2 = (correctAnswer - offset) as T;
+
+      if (!result.includes(candidate1) && candidate1 !== correctAnswer) {
+        result.push(candidate1);
+      }
+      if (result.length < count && !result.includes(candidate2) && candidate2 !== correctAnswer) {
+        result.push(candidate2);
+      }
+      offset++;
+
+      // Safety: prevent infinite loop
+      if (offset > 100) break;
+    }
+    return result.slice(0, count);
+  }
+
+  return uniqueWrong;
+}
+
 // ==================== QUESTION TEMPLATE INTERFACE ====================
 
 interface QuestionTemplate {
@@ -122,13 +170,16 @@ const additionTemplate: QuestionTemplate = {
     const correctAnswer = a + b;
 
     // Generate wrong answers
-    const wrongAnswers = [
+    const wrongAnswerCandidates = [
       correctAnswer + rng.nextInt(1, 10),
       correctAnswer - rng.nextInt(1, 10),
-      a + b + rng.nextInt(5, 15)
+      a + b + rng.nextInt(5, 15),
+      correctAnswer + 1,
+      correctAnswer - 1
     ].filter(x => x > 0 && x !== correctAnswer);
 
-    const choices = rng.shuffle([...wrongAnswers.slice(0, 3), correctAnswer]).map(String);
+    const uniqueWrong = ensureUniqueChoices(correctAnswer, wrongAnswerCandidates, 3);
+    const choices = rng.shuffle([...uniqueWrong, correctAnswer]).map(String);
 
     return {
       language,
@@ -171,13 +222,16 @@ const subtractionTemplate: QuestionTemplate = {
     const b = rng.nextInt(1, a); // Ensure positive result
     const correctAnswer = a - b;
 
-    const wrongAnswers = [
+    const wrongAnswerCandidates = [
       correctAnswer + rng.nextInt(1, 10),
       correctAnswer - rng.nextInt(1, Math.max(1, correctAnswer - 1)),
-      a + b
+      a + b,
+      correctAnswer + 1,
+      Math.max(0, correctAnswer - 1)
     ].filter(x => x >= 0 && x !== correctAnswer);
 
-    const choices = rng.shuffle([...wrongAnswers.slice(0, 3), correctAnswer]).map(String);
+    const uniqueWrong = ensureUniqueChoices(correctAnswer, wrongAnswerCandidates, 3);
+    const choices = rng.shuffle([...uniqueWrong, correctAnswer]).map(String);
 
     return {
       language,
@@ -227,14 +281,17 @@ const multiplicationTemplate: QuestionTemplate = {
     const b = rng.nextInt(2, maxB);
     const correctAnswer = a * b;
 
-    const wrongAnswers = [
+    const wrongAnswerCandidates = [
       correctAnswer + a,
       correctAnswer - b,
       a * (b + 1),
-      a * (b - 1)
+      a * (b - 1),
+      correctAnswer + 1,
+      correctAnswer - 1
     ].filter(x => x > 0 && x !== correctAnswer);
 
-    const choices = rng.shuffle([...wrongAnswers.slice(0, 3), correctAnswer]).map(String);
+    const uniqueWrong = ensureUniqueChoices(correctAnswer, wrongAnswerCandidates, 3);
+    const choices = rng.shuffle([...uniqueWrong, correctAnswer]).map(String);
 
     return {
       language,
@@ -284,14 +341,17 @@ const divisionTemplate: QuestionTemplate = {
     const result = rng.nextInt(2, maxResult);
     const dividend = divisor * result;
 
-    const wrongAnswers = [
+    const wrongAnswerCandidates = [
       result + 1,
       result - 1,
       result + rng.nextInt(2, 5),
-      divisor
+      divisor,
+      result + 2,
+      Math.max(1, result - 2)
     ].filter(x => x > 0 && x !== result);
 
-    const choices = rng.shuffle([...wrongAnswers.slice(0, 3), result]).map(String);
+    const uniqueWrong = ensureUniqueChoices(result, wrongAnswerCandidates, 3);
+    const choices = rng.shuffle([...uniqueWrong, result]).map(String);
 
     return {
       language,
@@ -444,14 +504,17 @@ const patternsTemplate: QuestionTemplate = {
     const sequence = [start, start + step, start + 2 * step, start + 3 * step];
     const correctAnswer = start + 4 * step;
 
-    const wrongAnswers = [
+    const wrongAnswerCandidates = [
       correctAnswer + step,
       correctAnswer - step,
       correctAnswer + rng.nextInt(1, 5),
-      sequence[3] * 2
+      sequence[3] * 2,
+      correctAnswer + 1,
+      correctAnswer - 1
     ].filter(x => x !== correctAnswer);
 
-    const choices = rng.shuffle([...wrongAnswers.slice(0, 3), correctAnswer]).map(String);
+    const uniqueWrong = ensureUniqueChoices(correctAnswer, wrongAnswerCandidates, 3);
+    const choices = rng.shuffle([...uniqueWrong, correctAnswer]).map(String);
 
     return {
       language,
@@ -495,14 +558,15 @@ const countingTemplate: QuestionTemplate = {
     const steps = rng.nextInt(3, 7);
     const correctAnswer = start + countBy * steps;
 
-    const wrongAnswers = [
+    const wrongAnswerCandidates = [
       correctAnswer + countBy,
       correctAnswer - countBy,
       start + countBy * (steps + 1),
       start + countBy * (steps - 1)
     ].filter(x => x > 0 && x !== correctAnswer);
 
-    const choices = rng.shuffle([...wrongAnswers.slice(0, 3), correctAnswer]).map(String);
+    const wrongAnswers = ensureUniqueChoices(correctAnswer, wrongAnswerCandidates, 3);
+    const choices = rng.shuffle([...wrongAnswers, correctAnswer]).map(String);
 
     return {
       language,

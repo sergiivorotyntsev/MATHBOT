@@ -41,13 +41,14 @@ export const TopicSelector: React.FC<TopicSelectorProps> = ({
       const counts: Record<string, number> = {};
 
       for (const topic of availableTopics) {
-        const topicName = language === 'ru' ? topic.name.ru : topic.name.en;
-        const englishTopic = getQuestionTopicFromUI(topicName);
+        // Use curriculum ID for mapping (not display name!)
+        const englishTopic = getQuestionTopicFromUI(topic.id);
 
         if (englishTopic) {
           try {
-            // Get domain from topic  structure (you may need to adjust based on your data)
-            const domain = topic.domain === 'OA' || topic.domain === 'NBT' || topic.domain === 'NF' ? 'Arithmetic'
+            // Get domain from topic structure
+            const domain = topic.domain === 'OA' || topic.domain === 'NBT' || topic.domain === 'NF'
+              ? 'Arithmetic'
               : topic.domain === 'G' ? 'Geometry'
               : 'Logic';
 
@@ -58,10 +59,11 @@ export const TopicSelector: React.FC<TopicSelectorProps> = ({
             );
             counts[topic.id] = count;
           } catch (error) {
-            console.error(`Failed to count questions for ${topicName}:`, error);
+            console.error(`Failed to count questions for ${topic.id}:`, error);
             counts[topic.id] = 0;
           }
         } else {
+          console.warn(`No mapping found for curriculum ID: ${topic.id}`);
           counts[topic.id] = 0;
         }
       }

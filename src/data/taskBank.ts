@@ -14,14 +14,15 @@ export type SkillType = 'arithmetic' | 'geometry' | 'logic';
 
 export interface Task {
   q: string; // Вопрос
-  a: number; // Правильный ответ
+  a: number | string; // Правильный ответ (число или текст для Shapes, Patterns, etc.)
   t: string; // Тема
   e: string; // Объяснение
   d: number; // Сложность (1-6)
   time?: number; // Лимит времени (секунды)
   xp?: number; // Награда XP
   hint?: string; // Подсказка
-  skillType?: SkillType; // Тип навыка (добавляется автоматически)
+  skill?: SkillType; // Тип навыка
+  skillType?: SkillType; // Deprecated alias для совместимости
 }
 
 export interface TaskBank {

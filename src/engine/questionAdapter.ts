@@ -17,9 +17,25 @@ export function questionToTask(question: Question, index: number): TaskWithOptio
   // Map skill ID to old SkillType
   const skillType = mapSkillIdToSkillType(question.skillId);
 
-  // Parse choices to numbers
-  const numericChoices = question.choices.map(c => parseFloat(c) || 0);
-  const correctAnswer = parseFloat(question.correctAnswer) || 0;
+  // Check if all choices are numeric
+  const isNumericQuestion = question.choices.every(c => {
+    const parsed = parseFloat(c);
+    return !isNaN(parsed) && String(parsed) === c.trim();
+  });
+
+  // Convert choices and answer based on question type
+  let choices: (number | string)[];
+  let correctAnswer: number | string;
+
+  if (isNumericQuestion) {
+    // Numeric question: convert to numbers
+    choices = question.choices.map(c => parseFloat(c));
+    correctAnswer = parseFloat(question.correctAnswer);
+  } else {
+    // Text question: keep as strings (Shapes, Patterns, Word Problems)
+    choices = question.choices;
+    correctAnswer = question.correctAnswer;
+  }
 
   return {
     // Old Task fields
@@ -31,7 +47,7 @@ export function questionToTask(question: Question, index: number): TaskWithOptio
     time: getTimeForDifficulty(question.difficultyTier),
 
     // TaskWithOptions fields
-    options: numericChoices,
+    options: choices,
     index,
 
     // Metadata for tracking
@@ -103,7 +119,7 @@ function getTimeForDifficulty(tier: number): number {
  * Extended TaskWithOptions that includes new system metadata
  */
 export interface TaskWithOptions extends Task {
-  options: number[];
+  options: (number | string)[];  // Support both numeric and text answers
   index: number;
   _questionId?: string;  // Track original question ID
   _skillId?: SkillId;    // Track skill ID for stats
