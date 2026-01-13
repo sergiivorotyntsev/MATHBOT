@@ -7,11 +7,12 @@
   "scripts": {
     "dev": "vite",
     "dev:server": "cd server && npm run dev",
-    "build": "vite build",
+    "validate": "tsx scripts/validateQuestionBank.ts",
+    "build": "npm run validate && vite build",
     "build:questionbank": "tsx scripts/buildQuestionBank.ts",
     "preview": "vite preview",
     "lint": "eslint src --ext ts,tsx",
-    "test": "vitest",
+    "test": "vitest && npm run validate",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
