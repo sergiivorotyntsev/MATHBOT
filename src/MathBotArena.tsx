@@ -28,7 +28,6 @@ import { useI18n } from './i18n/context';
 import { AvatarProfile, AvatarBaseType, AvatarCosmetics, createDefaultAvatar } from './avatar/types';
 import { AvatarSelection } from './avatar/AvatarSelection';
 import { AvatarView } from './avatar/AvatarView';
-import { SkillsDashboard } from './avatar/SkillsDashboard.v3';
 import { ProgressTab } from './components/ProgressTab';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { PlayerHeader } from './components/PlayerHeader';
