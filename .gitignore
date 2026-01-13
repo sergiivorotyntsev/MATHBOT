@@ -39,4 +39,8 @@ coverage/
 # Misc
 *.tsbuildinfo
 
+# Database files
+*.db
+*.db-*
+
 /src/generated/prisma
