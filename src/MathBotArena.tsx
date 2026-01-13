@@ -55,6 +55,9 @@ import type { SkillId } from './types/question';
 import { createSkillId, QuestionDomain, QuestionTopic } from './types/question';
 import { getQuestionTopicFromUI } from './engine/topicMapping';
 import { recordAttempt, generateAttemptId, tierToDifficultyScore } from './progress/attemptLog';
+import { apiClient } from './api/client';
+import type { Session as APISession } from './api/client';
+import { getSkillIdFromUI, getDomainFromSkillType } from './utils/skillMapping';
 
 // ==================== TYPES ====================
 
@@ -350,6 +353,11 @@ const MathBotArena: React.FC = () => {
   const [showRewardSummary, setShowRewardSummary] = useState(false);
   const [sessionRewards, setSessionRewards] = useState<any>(null);
 
+  // API integration state
+  const [apiSession, setApiSession] = useState<APISession | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
+
   // ==================== LOAD FROM STORAGE ====================
 
   useEffect(() => {
@@ -370,6 +378,40 @@ const MathBotArena: React.FC = () => {
       if (saved.userData) setScreen('game');
     }
   }, []);
+
+  // ==================== INITIALIZE API USER ====================
+
+  useEffect(() => {
+    async function initializeUser() {
+      if (!userData) return;
+
+      try {
+        console.log('[API] Initializing user for email:', userData.email);
+
+        // Check if user exists in API, create if not
+        // For now, use email as a simple identifier
+        const userId = userData.email.replace('@', '_at_').replace(/\./g, '_');
+
+        // Try to get user from API
+        try {
+          const { user } = await apiClient.getUser(userId);
+          console.log('[API] User found:', user.id);
+          setCurrentUserId(user.id);
+          apiClient.setUserId(user.id);
+        } catch (error) {
+          // User doesn't exist, will use fallback mode
+          console.log('[API] User not found in backend, using local mode');
+          setCurrentUserId(null);
+        }
+      } catch (error) {
+        console.error('[API] Failed to initialize user:', error);
+        setApiError('Failed to connect to backend');
+        setCurrentUserId(null);
+      }
+    }
+
+    initializeUser();
+  }, [userData]);
 
   // ==================== SAVE TO STORAGE ====================
 
@@ -508,6 +550,75 @@ const MathBotArena: React.FC = () => {
 
     try {
       console.log(`[Session] Starting ${mode} session for ${skillType}, topic: ${topic || 'any'}, subtopic: ${subtopic || 'any'} (age ${userData.age})`);
+
+      // Use API if available, otherwise fall back to local questionService
+      if (currentUserId) {
+        console.log('[Session] Using API backend for session creation');
+
+        // Get skill IDs from UI selection
+        const skillIds = getSkillIdFromUI(skillType, topic);
+        const domain = getDomainFromSkillType(skillType);
+
+        console.log(`[Session] API request: skillIds=${skillIds}, domain=${domain}, age=${userData.age}`);
+
+        // Create session via API
+        const response = await apiClient.createSession({
+          mode,
+          selectedSkillIds: skillIds,
+          targetDifficulty: 5, // Default difficulty
+          questionCount,
+        });
+
+        console.log(`[Session] API returned ${response.session.questions.length} questions`);
+
+        // Store API session
+        setApiSession(response.session);
+
+        // Convert API questions to old Task format for compatibility
+        const questions: TaskWithOptions[] = response.session.questions.map((q, index) => ({
+          q: q.prompt,
+          a: q.correct,
+          t: q.topic,
+          e: q.explanation,
+          d: Math.ceil(q.difficulty / 1.67), // Convert 1-10 back to 1-6
+          time: 45,
+          options: q.choices,
+          index,
+          skillType,
+        }));
+
+        const newSession: SessionData = {
+          active: true,
+          mode,
+          skillType,
+          currentQ: 0,
+          totalQ: questions.length,
+          correct: 0,
+          questions,
+          startedAt: Date.now(),
+          appSwitches: 0,
+          suspiciousActivity: false,
+        };
+
+        setSession(newSession);
+        setCurrentTask(questions[0]);
+        setCombo(0);
+        setFeedback(null);
+
+        if (mode === 'training') {
+          setTimeLeft(questions[0].time || 45);
+          setIsTimerActive(true);
+          setAnswerStartTime(Date.now());
+        } else {
+          setIsTimerActive(false);
+        }
+
+        console.log(`[Session] API session created successfully`);
+        return;
+      }
+
+      // Fallback to local questionService if API not available
+      console.log('[Session] Using local questionService (API not available)');
 
       // Build SkillId from domain/topic/subtopic
       let focusSkillId: SkillId;
@@ -727,6 +838,29 @@ const MathBotArena: React.FC = () => {
             userAge: userData.age,
             xpGained
           });
+
+          // 🌐 RECORD TO API (if session was created via API)
+          if (apiSession && currentUserId) {
+            try {
+              const questionIndex = session.currentQ;
+              const apiQuestion = apiSession.questions[questionIndex];
+
+              if (apiQuestion) {
+                await apiClient.recordAttempt({
+                  sessionId: apiSession.id,
+                  questionId: apiQuestion.id,
+                  skillId: apiQuestion.skillId,
+                  givenAnswer: answer.toString(),
+                  isCorrect: true,
+                  responseTimeMs: timeMs,
+                });
+                console.log('[API] Recorded correct attempt to backend');
+              }
+            } catch (apiError) {
+              console.error('[API] Failed to record attempt:', apiError);
+              // Continue - don't block user experience if API fails
+            }
+          }
         }
       } catch (error) {
         console.error('[Stats] Failed to record answer:', error);
@@ -829,6 +963,29 @@ const MathBotArena: React.FC = () => {
         userAge: userData.age,
         xpGained: 0
       });
+
+      // 🌐 RECORD TO API (if session was created via API)
+      if (apiSession && currentUserId) {
+        try {
+          const questionIndex = session.currentQ;
+          const apiQuestion = apiSession.questions[questionIndex];
+
+          if (apiQuestion) {
+            await apiClient.recordAttempt({
+              sessionId: apiSession.id,
+              questionId: apiQuestion.id,
+              skillId: apiQuestion.skillId,
+              givenAnswer: answer.toString(),
+              isCorrect: false,
+              responseTimeMs: timeMs,
+            });
+            console.log('[API] Recorded incorrect attempt to backend');
+          }
+        } catch (apiError) {
+          console.error('[API] Failed to record attempt:', apiError);
+          // Continue - don't block user experience if API fails
+        }
+      }
 
       // Track error (✅ immutably)
       setPlayerBot(prev => ({
