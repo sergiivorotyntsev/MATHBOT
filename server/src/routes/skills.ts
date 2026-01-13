@@ -18,6 +18,41 @@ import {
 
 const router = Router();
 
+// ==================== GET /api/skills/stats ====================
+
+/**
+ * Get question count statistics for all skills
+ * Returns: { skillId: questionCount }
+ */
+router.get('/stats', async (req, res) => {
+  try {
+    const skills = await prisma.skill.findMany({
+      select: {
+        id: true,
+        domain: true,
+        topic: true,
+        _count: {
+          select: { questions: true }
+        }
+      }
+    });
+
+    const stats = skills.reduce((acc, skill) => {
+      acc[skill.id] = {
+        count: skill._count.questions,
+        domain: skill.domain,
+        topic: skill.topic
+      };
+      return acc;
+    }, {} as Record<string, { count: number; domain: string; topic: string }>);
+
+    res.json(stats);
+  } catch (error) {
+    console.error('[Skills API] Stats error:', error);
+    res.status(500).json({ error: 'Failed to fetch skill stats' });
+  }
+});
+
 // ==================== GET /api/skills ====================
 
 /**

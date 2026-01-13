@@ -36,6 +36,7 @@ import { TrainingDashboard } from './components/TrainingDashboard';
 import { GamificationWidget } from './components/GamificationWidget';
 import { AchievementNotification } from './components/AchievementNotification';
 import { RewardSummary } from './components/RewardSummary';
+import { AdminPanel } from './components/AdminPanel';
 import { calculateScore } from './scoring/scoring';
 import { calculateSkillGains, applySkillGains } from './skills/skillGain';
 import { applySkillDecay, getDecayWarning } from './skills/skillDecay';
@@ -331,12 +332,13 @@ const createInitialSession = (): SessionData => ({
 
 const MathBotArena: React.FC = () => {
   // i18n
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   // State
   const [screen, setScreen] = useState<'welcome' | 'register' | 'avatar-select' | 'game' | 'pvp'>('welcome');
-  const [activeTab, setActiveTab] = useState<'training' | 'progress' | 'materials' | 'account' | 'pvp'>('training');
+  const [activeTab, setActiveTab] = useState<'training' | 'progress' | 'materials' | 'account' | 'pvp' | 'admin'>('training');
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [playerBot, setPlayerBot] = useState<PlayerBot>(createInitialPlayerBot());
   const [session, setSession] = useState<SessionData>(createInitialSession());
   const [currentTask, setCurrentTask] = useState<TaskWithOptions | null>(null);
@@ -1474,6 +1476,18 @@ const MathBotArena: React.FC = () => {
               {tab === 'account' && t('nav.profile')}
             </button>
           ))}
+
+          {/* Admin Tab - Only visible for admin users */}
+          {userData?.email === 'admin@mathbot.local' && (
+            <button
+              onClick={() => setShowAdminPanel(true)}
+              className="px-4 sm:px-6 py-3 rounded-lg font-semibold transition-all text-sm sm:text-base bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 flex items-center gap-2"
+              style={{ minHeight: '44px' }}
+            >
+              <Settings className="w-4 h-4" />
+              {language === 'ru' ? 'Админ' : 'Admin'}
+            </button>
+          )}
         </div>
 
         {/* Content Area */}
@@ -1963,6 +1977,14 @@ const MathBotArena: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Admin Panel Modal */}
+      {showAdminPanel && (
+        <AdminPanel
+          userRole={userData?.email === 'admin@mathbot.local' ? 'admin' : 'student'}
+          onClose={() => setShowAdminPanel(false)}
+        />
+      )}
     </div>
   );
 };

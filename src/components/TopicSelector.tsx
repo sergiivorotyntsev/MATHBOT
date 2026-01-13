@@ -11,6 +11,8 @@ import { ageToGrade } from '../engine/questionEngineAdapter';
 import { useI18n } from '../i18n/context';
 import { questionService } from '../engine/questionService';
 import { getQuestionTopicFromUI } from '../engine/topicMapping';
+import { apiClient } from '../api/client';
+import { getSkillIdFromUI } from '../utils/skillMapping';
 
 interface TopicSelectorProps {
   userAge: number;
@@ -40,31 +42,68 @@ export const TopicSelector: React.FC<TopicSelectorProps> = ({
     const loadQuestionCounts = async () => {
       const counts: Record<string, number> = {};
 
-      for (const topic of availableTopics) {
-        // Use curriculum ID for mapping (not display name!)
-        const englishTopic = getQuestionTopicFromUI(topic.id);
+      try {
+        // Try to get counts from API first
+        console.log('[TopicSelector] Loading question counts from API...');
+        const skillStats = await apiClient.getSkillStats();
 
-        if (englishTopic) {
+        for (const topic of availableTopics) {
+          // Map topic to skill IDs
+          const displayName = language === 'ru' ? topic.name.ru : topic.name.en;
+
+          // Get domain from topic structure
+          const domain = topic.domain === 'OA' || topic.domain === 'NBT' || topic.domain === 'NF'
+            ? 'arithmetic'
+            : topic.domain === 'G' ? 'geometry'
+            : 'logic';
+
           try {
-            // Get domain from topic structure
-            const domain = topic.domain === 'OA' || topic.domain === 'NBT' || topic.domain === 'NF'
-              ? 'Arithmetic'
-              : topic.domain === 'G' ? 'Geometry'
-              : 'Logic';
+            const skillIds = getSkillIdFromUI(domain, displayName);
 
-            const count = await questionService.countQuestionsByTopic(
-              domain.toLowerCase() as any,
-              englishTopic,
-              userAge
-            );
-            counts[topic.id] = count;
+            // Sum up question counts for all matching skill IDs
+            let totalCount = 0;
+            for (const skillId of skillIds) {
+              if (skillStats[skillId]) {
+                totalCount += skillStats[skillId].count;
+              }
+            }
+
+            counts[topic.id] = totalCount;
+            console.log(`[TopicSelector] ${displayName}: ${totalCount} questions (skills: ${skillIds.join(', ')})`);
           } catch (error) {
-            console.error(`Failed to count questions for ${topic.id}:`, error);
+            console.warn(`[TopicSelector] Failed to map topic ${topic.id}:`, error);
             counts[topic.id] = 0;
           }
-        } else {
-          console.warn(`No mapping found for curriculum ID: ${topic.id}`);
-          counts[topic.id] = 0;
+        }
+
+        console.log('[TopicSelector] Loaded question counts from API:', counts);
+      } catch (apiError) {
+        console.error('[TopicSelector] API unavailable, falling back to local count:', apiError);
+
+        // Fallback to local question service
+        for (const topic of availableTopics) {
+          const englishTopic = getQuestionTopicFromUI(topic.id);
+
+          if (englishTopic) {
+            try {
+              const domain = topic.domain === 'OA' || topic.domain === 'NBT' || topic.domain === 'NF'
+                ? 'Arithmetic'
+                : topic.domain === 'G' ? 'Geometry'
+                : 'Logic';
+
+              const count = await questionService.countQuestionsByTopic(
+                domain.toLowerCase() as any,
+                englishTopic,
+                userAge
+              );
+              counts[topic.id] = count;
+            } catch (error) {
+              console.error(`Failed to count questions for ${topic.id}:`, error);
+              counts[topic.id] = 0;
+            }
+          } else {
+            counts[topic.id] = 0;
+          }
         }
       }
 

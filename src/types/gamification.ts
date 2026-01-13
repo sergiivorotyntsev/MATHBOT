@@ -183,15 +183,31 @@ export function checkAchievements(
   const newUnlocked: Achievement[] = [];
 
   const updatedAchievements = gamification.achievements.map(achievement => {
-    if (!achievement.isUnlocked && achievement.condition({ ...stats, streak: gamification.streak.current })) {
-      newUnlocked.push(achievement);
-      return {
+    // Find original achievement definition to restore condition function
+    const originalAchievement = ACHIEVEMENTS.find(a => a.id === achievement.id);
+
+    if (!originalAchievement) {
+      console.warn(`[Gamification] Achievement ${achievement.id} not found in ACHIEVEMENTS`);
+      return achievement;
+    }
+
+    // Check if achievement should be unlocked
+    if (!achievement.isUnlocked && originalAchievement.condition({ ...stats, streak: gamification.streak.current })) {
+      const unlockedAchievement = {
         ...achievement,
+        condition: originalAchievement.condition, // Restore function
         isUnlocked: true,
         unlockedAt: new Date().toISOString()
       };
+      newUnlocked.push(unlockedAchievement);
+      return unlockedAchievement;
     }
-    return achievement;
+
+    // Return with restored condition function
+    return {
+      ...achievement,
+      condition: originalAchievement.condition
+    };
   });
 
   return {

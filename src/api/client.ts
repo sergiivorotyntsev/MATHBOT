@@ -340,6 +340,16 @@ class APIClient {
     return response.json();
   }
 
+  async getSkillStats(): Promise<Record<string, { count: number; domain: string; topic: string }>> {
+    const response = await fetch(`${this.baseUrl}/api/skills/stats`);
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch skill stats');
+    }
+
+    return response.json();
+  }
+
   // ==================== HEALTH ====================
 
   async healthCheck(): Promise<{ status: string; database: string; timestamp: string }> {
