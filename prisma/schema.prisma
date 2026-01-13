@@ -217,9 +217,12 @@ model Mastery {
   totalAttempts    Int     @default(0)
   correctAttempts  Int     @default(0)
 
-  // Spaced repetition
-  lastSeenAt DateTime?
-  dueAt      DateTime? // When to review next (forgetting curve)
+  // Spaced repetition (SM-2 algorithm)
+  lastSeenAt   DateTime?
+  dueAt        DateTime? // When to review next (forgetting curve)
+  easeFactor   Float     @default(2.5) // SM-2 ease factor (1.3-2.5+)
+  repetitions  Int       @default(0)   // Consecutive correct reviews
+  intervalDays Int       @default(0)   // Current interval in days
 
   // Adaptive difficulty
   currentDifficulty Int @default(1) // Current working difficulty for this skill

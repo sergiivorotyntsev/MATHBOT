@@ -149,7 +149,7 @@ router.get('/user/:userId/recent', async (req, res) => {
 
 /**
  * Update mastery record based on attempt
- * Implements simple spaced repetition logic
+ * Implements SM-2 spaced repetition algorithm
  */
 async function updateMastery(
   userId: string,
@@ -177,37 +177,74 @@ async function updateMastery(
         streak: 0,
         totalAttempts: 0,
         correctAttempts: 0,
+        easeFactor: 2.5, // SM-2 default
+        repetitions: 0,
+        intervalDays: 0,
       },
     });
   }
 
-  // Update stats
+  // Update basic stats
   const newTotalAttempts = mastery.totalAttempts + 1;
   const newCorrectAttempts = mastery.correctAttempts + (isCorrect ? 1 : 0);
   const newRollingAccuracy = newCorrectAttempts / newTotalAttempts;
-
   const newStreak = isCorrect ? mastery.streak + 1 : 0;
 
-  // Simple mastery score: weighted average of accuracy and streak bonus
-  const accuracyScore = newRollingAccuracy * 0.7;
-  const streakBonus = Math.min(newStreak / 10, 0.3); // Max 30% bonus from streak
-  const newMasteryScore = Math.min(accuracyScore + streakBonus, 1.0);
-
-  // Calculate next review date (simplified SM-2)
-  const now = new Date();
-  let interval = 1; // days
-
-  if (newMasteryScore >= 0.9) {
-    interval = 7; // Mastered: review in 1 week
-  } else if (newMasteryScore >= 0.7) {
-    interval = 3; // Good: review in 3 days
-  } else if (newMasteryScore >= 0.5) {
-    interval = 1; // Medium: review tomorrow
+  // Calculate SM-2 quality (0-5 scale)
+  // Map: correct + fast = 5, correct + slow = 3, incorrect = 0-2
+  let quality: number;
+  if (isCorrect) {
+    // Fast response: < 10 seconds = quality 5, > 30 seconds = quality 3
+    const seconds = responseTimeMs / 1000;
+    if (seconds < 10) {
+      quality = 5; // Perfect recall
+    } else if (seconds < 20) {
+      quality = 4; // Good recall
+    } else {
+      quality = 3; // Recall with hesitation
+    }
   } else {
-    interval = 0; // Weak: review today
+    // Incorrect: quality 0 (complete blackout)
+    quality = 0;
   }
 
-  const dueAt = new Date(now.getTime() + interval * 24 * 60 * 60 * 1000);
+  // SM-2 Algorithm
+  let newEaseFactor = mastery.easeFactor;
+  let newRepetitions = mastery.repetitions;
+  let newIntervalDays = mastery.intervalDays;
+
+  if (quality >= 3) {
+    // Correct answer: update ease factor and repetitions
+    newEaseFactor = mastery.easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+    newEaseFactor = Math.max(1.3, newEaseFactor); // Minimum 1.3
+
+    newRepetitions = mastery.repetitions + 1;
+
+    // Calculate interval
+    if (newRepetitions === 1) {
+      newIntervalDays = 1;
+    } else if (newRepetitions === 2) {
+      newIntervalDays = 6;
+    } else {
+      newIntervalDays = Math.round(mastery.intervalDays * newEaseFactor);
+    }
+  } else {
+    // Incorrect answer: reset repetitions, shrink interval
+    newRepetitions = 0;
+    newIntervalDays = 1;
+    // Ease factor stays the same (don't penalize learning)
+  }
+
+  // Calculate next review date
+  const now = new Date();
+  const dueAt = new Date(now.getTime() + newIntervalDays * 24 * 60 * 60 * 1000);
+
+  // Calculate mastery score (0-1): based on ease factor and repetitions
+  // EF ranges from 1.3 to 2.5+ (normalized to 0-1)
+  // Repetitions: 0-10+ (normalized to 0-0.5)
+  const efScore = Math.min((newEaseFactor - 1.3) / 1.2, 1.0); // 0-1
+  const repScore = Math.min(newRepetitions / 10, 0.5); // 0-0.5
+  const newMasteryScore = Math.min(efScore * 0.7 + repScore + newRollingAccuracy * 0.3, 1.0);
 
   // Update mastery record
   await prisma.mastery.update({
@@ -225,7 +262,10 @@ async function updateMastery(
       masteryScore: newMasteryScore,
       lastSeenAt: now,
       dueAt,
-      currentDifficulty: mastery.currentDifficulty, // TODO: Adapt based on performance
+      easeFactor: newEaseFactor,
+      repetitions: newRepetitions,
+      intervalDays: newIntervalDays,
+      currentDifficulty: mastery.currentDifficulty,
     },
   });
 }

@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { prisma } from '../index';
 import { requireUser } from '../middleware/auth';
 import { CreateSessionSchema, UpdateSessionSchema } from '../validators/schemas';
+import { SessionBuilderService } from '../services/sessionBuilder';
 
 const router = Router();
 
@@ -51,52 +52,26 @@ router.post('/', requireUser, async (req, res) => {
       });
     }
 
-    // TODO: Call session builder service to select questions
-    // For now, select random questions matching criteria
-    const questions = await prisma.question.findMany({
-      where: {
-        skillId: { in: data.selectedSkillIds },
-        difficulty: { lte: data.targetDifficulty },
-        ageMin: { lte: user.age },
-        ageMax: { gte: user.age },
-        validated: true,
-      },
-      take: data.questionCount,
-      orderBy: {
-        id: 'asc', // TODO: Replace with smart selection
-      },
-    });
+    // Use Session Builder Service for intelligent question selection
+    const sessionBuilder = new SessionBuilderService(prisma);
 
-    if (questions.length === 0) {
-      return res.status(404).json({
-        error: 'No questions found',
-        message: 'No validated questions match the selected criteria',
-      });
-    }
+    // Determine domain from skills (if all skills share same domain)
+    const domains = [...new Set(skills.map(s => s.domain))];
+    const domain = domains.length === 1 ? domains[0] : undefined;
 
-    // Create session
-    const session = await prisma.session.create({
-      data: {
-        userId: data.userId,
-        mode: data.mode,
-        selectedSkillIds: JSON.stringify(data.selectedSkillIds),
-        targetDifficulty: data.targetDifficulty,
-        questionCount: data.questionCount,
-      },
-    });
-
-    // Create session questions (join table)
-    await prisma.sessionQuestion.createMany({
-      data: questions.map((q, index) => ({
-        sessionId: session.id,
-        questionId: q.id,
-        orderIndex: index,
-      })),
+    const result = await sessionBuilder.buildSession({
+      userId: data.userId,
+      mode: data.mode,
+      domain,
+      skillIds: data.selectedSkillIds,
+      gradeBand: user.gradeBand,
+      count: data.questionCount,
+      targetDifficulty: data.targetDifficulty,
     });
 
     // Fetch full session with questions
     const fullSession = await prisma.session.findUnique({
-      where: { id: session.id },
+      where: { id: result.sessionId },
       include: {
         sessionQuestions: {
           include: {
@@ -119,6 +94,7 @@ router.post('/', requireUser, async (req, res) => {
           tags: JSON.parse(sq.question.tags),
         })),
       },
+      metadata: result.metadata,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
