@@ -251,6 +251,13 @@ function generateQuestionsForSkill(
         language
       );
 
+      // CRITICAL: Validate that generated question matches requested skillId
+      if (question.skillId !== skillId) {
+        console.error(`[SessionBuilder] SKILL MISMATCH! Requested: ${skillId}, Got: ${question.skillId}`);
+        console.error(`[SessionBuilder] Template: ${template.templateId}, Domain: ${template.domain}, Topic: ${template.topic}`);
+        continue; // Skip this question
+      }
+
       // Check uniqueness and prerequisites
       if (!usedIds.has(question.id) && checkPrerequisites(question, masteredSkills)) {
         questions.push(question);
@@ -307,18 +314,36 @@ function generateQuestionsForSkills(
 
 /**
  * Find templates that match a skill ID
+ * CRITICAL: Must filter by BOTH domain AND topic
  */
 function findTemplatesForSkill(skillId: SkillId): any[] {
-  // Parse skill ID to extract topic
+  // Parse skill ID: domain_topic(_subtopic)
   const parts = skillId.split('_');
-  const topicSlug = parts[1];
+  const domainSlug = parts[0]; // 'arithmetic', 'geometry', 'logic'
+  const topicSlug = parts[1];   // 'shapes', 'addition', etc.
 
-  // Find templates matching this topic
+  // Normalize domain for matching
+  const domainNormalized = domainSlug.charAt(0).toUpperCase() + domainSlug.slice(1); // 'Arithmetic'
+
+  // Find templates matching BOTH domain AND topic
   const allTemplates = getAvailableTemplates();
-  return allTemplates.filter(t => {
+  const matches = allTemplates.filter(t => {
+    // Check domain match
+    const domainMatches = t.domain === domainNormalized;
+
+    // Check topic match
     const templateTopicSlug = t.topic.toLowerCase().replace(/\s+/g, '_');
-    return templateTopicSlug === topicSlug;
+    const topicMatches = templateTopicSlug === topicSlug;
+
+    return domainMatches && topicMatches;
   });
+
+  if (matches.length === 0) {
+    console.warn(`[SessionBuilder] No templates found for skillId="${skillId}" (domain="${domainNormalized}", topic="${topicSlug}")`);
+    console.warn(`[SessionBuilder] Available templates:`, allTemplates.map(t => `${t.domain}/${t.topic}`).slice(0, 10));
+  }
+
+  return matches;
 }
 
 /**
