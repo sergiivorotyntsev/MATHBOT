@@ -29,17 +29,26 @@ describe('Skill Registry Validation', () => {
 
   it('should have valid prerequisites (no circular dependencies)', () => {
     for (const skill of SKILL_REGISTRY) {
+      const visiting = new Set<SkillId>();
       const visited = new Set<SkillId>();
+
       const checkPrereqs = (currentId: SkillId) => {
-        if (visited.has(currentId)) {
+        if (visiting.has(currentId)) {
           throw new Error(`Circular dependency detected: ${currentId}`);
         }
-        visited.add(currentId);
+        if (visited.has(currentId)) {
+          return; // Already checked
+        }
+
+        visiting.add(currentId);
 
         const currentSkill = SKILL_REGISTRY.find(s => s.id === currentId);
         if (currentSkill) {
           currentSkill.prerequisites.forEach(checkPrereqs);
         }
+
+        visiting.delete(currentId);
+        visited.add(currentId);
       };
 
       expect(() => checkPrereqs(skill.id)).not.toThrow();

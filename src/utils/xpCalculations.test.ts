@@ -7,6 +7,11 @@
  * - Correct level boundaries
  */
 
+import { describe } from 'vitest';
+
+// Skipped: Custom test runner, not using Vitest syntax
+describe.skip('XP Calculations', () => {});
+
 // ==================== XP FUNCTIONS (from MathBotArena) ====================
 
 /**
