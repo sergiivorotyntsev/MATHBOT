@@ -38,3 +38,5 @@ coverage/
 
 # Misc
 *.tsbuildinfo
+
+/src/generated/prisma

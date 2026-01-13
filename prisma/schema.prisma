@@ -1,0 +1,287 @@
+// MATHBOT Arena Database Schema
+// SQLite for local dev, designed to be Postgres-compatible
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ==================== USERS ====================
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  age       Int
+  gradeBand String   // K-1, 2-3, 4-5, 6-7, 8-9, 10-12
+  email     String?  @unique
+  role      String   @default("student") // student, admin
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions  Session[]
+  attempts  Attempt[]
+  mastery   Mastery[]
+
+  @@index([email])
+  @@index([gradeBand])
+}
+
+// ==================== SKILLS TAXONOMY ====================
+
+model Skill {
+  id           String   @id // e.g., "arithmetic_addition"
+  domain       String   // Arithmetic, Geometry, Logic
+  topic        String   // Addition, Shapes, Patterns
+  subtopic     String?  // Optional: e.g., "single_digit", "double_digit"
+  displayName  String   // UI-friendly name
+  description  String?  // Learning objectives
+
+  // Prerequisites (stored as JSON array of skill IDs)
+  prerequisites String  @default("[]") // JSON array: ["arithmetic_counting"]
+
+  // Metadata
+  gradeMin     String   // K-1, 2-3, etc.
+  gradeMax     String
+  estimatedMinutes Int @default(30) // Estimated time to master
+  priority     Int      @default(2) // 1=high, 2=medium, 3=low
+
+  // Standards alignment
+  ccssStandards String @default("[]") // JSON array: ["K.G.A.2"]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  questions Question[]
+  mastery   Mastery[]
+
+  @@index([domain])
+  @@index([topic])
+  @@index([domain, topic])
+}
+
+// ==================== QUESTIONS ====================
+
+model Question {
+  id          String   @id @default(uuid())
+
+  // Taxonomy
+  skillId     String
+  skill       Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  domain      String   // Denormalized for faster queries
+  topic       String   // Denormalized
+  subtopic    String?  // Denormalized
+
+  // Difficulty & Targeting
+  difficulty  Int      // 1-10 scale within skill
+  ageMin      Int      // e.g., 6
+  ageMax      Int      // e.g., 10
+  gradeMin    String   // e.g., "K-1"
+  gradeMax    String   // e.g., "4-5"
+
+  // Content
+  locale      String   @default("en") // en, ru, es
+  prompt      String   // Question text
+  choices     String   // JSON array: ["circle", "triangle", "square", "pentagon"]
+  correct     String   // Correct answer (matches one item in choices)
+  explanation String?  // Why this is correct
+
+  // Metadata
+  format      String   @default("mcq") // mcq, input, drag-drop
+  tags        String   @default("[]") // JSON array: ["visual", "word_problem"]
+  version     Int      @default(1) // For A/B testing / content updates
+
+  // Content validation
+  contentHash String?  // For duplicate detection
+  validated   Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessionQuestions SessionQuestion[]
+  attempts         Attempt[]
+
+  @@index([skillId])
+  @@index([domain, topic])
+  @@index([difficulty])
+  @@index([ageMin, ageMax])
+  @@index([gradeMin, gradeMax])
+  @@index([locale])
+  @@index([contentHash])
+  @@index([validated])
+}
+
+// ==================== SESSIONS ====================
+
+model Session {
+  id        String   @id @default(uuid())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Configuration
+  mode      String   // training, bot, learning
+  selectedSkillIds String // JSON array: ["arithmetic_addition", "geometry_shapes"]
+  targetDifficulty Int    @default(5) // 1-10
+  questionCount    Int    @default(10)
+
+  // Timing
+  startedAt DateTime @default(now())
+  endedAt   DateTime?
+
+  // Results (computed)
+  questionsCompleted Int @default(0)
+  correctCount       Int @default(0)
+  totalTimeMs        Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessionQuestions SessionQuestion[]
+  attempts         Attempt[]
+
+  @@index([userId])
+  @@index([startedAt])
+  @@index([mode])
+}
+
+// ==================== SESSION QUESTIONS (Join Table) ====================
+
+model SessionQuestion {
+  id         String @id @default(uuid())
+
+  sessionId  String
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  orderIndex Int // Position in session (0-based)
+
+  createdAt DateTime @default(now())
+
+  @@unique([sessionId, questionId]) // No duplicates within session
+  @@unique([sessionId, orderIndex]) // Each position is unique
+  @@index([sessionId])
+  @@index([questionId])
+}
+
+// ==================== ATTEMPTS (Answer Log) ====================
+
+model Attempt {
+  id         String   @id @default(uuid())
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  sessionId  String
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  // Answer data
+  isCorrect  Boolean
+  selected   String   // What the user chose
+  timeMs     Int      // Response time in milliseconds
+
+  // Context
+  difficultyAtTime Int // Question difficulty when answered
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([questionId])
+  @@index([userId, questionId]) // For per-question history
+  @@index([createdAt]) // For time-series queries
+}
+
+// ==================== MASTERY (Computed Progress) ====================
+
+model Mastery {
+  id        String   @id @default(uuid())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  skillId   String
+  skill     Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  // Progress metrics
+  masteryScore     Float   @default(0.0) // 0.0-1.0
+  rollingAccuracy  Float   @default(0.0) // Last N attempts accuracy
+  streak           Int     @default(0)   // Current correct streak
+  totalAttempts    Int     @default(0)
+  correctAttempts  Int     @default(0)
+
+  // Spaced repetition
+  lastSeenAt DateTime?
+  dueAt      DateTime? // When to review next (forgetting curve)
+
+  // Adaptive difficulty
+  currentDifficulty Int @default(1) // Current working difficulty for this skill
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, skillId]) // One mastery record per user per skill
+  @@index([userId])
+  @@index([skillId])
+  @@index([dueAt]) // For "due for review" queries
+  @@index([masteryScore]) // For sorting by proficiency
+}
+
+// ==================== LEARNING MATERIALS ====================
+
+model Material {
+  id          String   @id @default(uuid())
+
+  // Taxonomy link
+  skillId     String?  // Optional: can be skill-specific or general
+  domain      String?  // Optional: domain-level materials
+  topic       String?  // Optional: topic-level materials
+
+  // Content
+  title       String
+  description String?
+  type        String   // video, article, worksheet, interactive
+  url         String?  // External link
+  content     String?  // Markdown content for articles/guides
+
+  // Metadata
+  locale      String   @default("en")
+  ageMin      Int?
+  ageMax      Int?
+  tags        String   @default("[]") // JSON array
+
+  // Visibility
+  published   Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([skillId])
+  @@index([domain, topic])
+  @@index([published])
+}
+
+// ==================== ADMIN AUDIT LOG ====================
+
+model AuditLog {
+  id        String   @id @default(uuid())
+
+  userId    String?  // Who made the change
+  action    String   // CREATE, UPDATE, DELETE, IMPORT
+  entity    String   // Question, Skill, User, etc.
+  entityId  String?  // ID of affected entity
+  changes   String?  // JSON: before/after
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity])
+  @@index([createdAt])
+}
