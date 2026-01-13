@@ -55,6 +55,7 @@ import { questionsToTasks, getSkillIdFromTask, logSessionSummary, TaskWithOption
 import type { SkillId } from './types/question';
 import { createSkillId, QuestionDomain, QuestionTopic } from './types/question';
 import { getQuestionTopicFromUI } from './engine/topicMapping';
+import { recordAttempt, generateAttemptId, tierToDifficultyScore } from './progress/attemptLog';
 
 // ==================== TYPES ====================
 
@@ -712,6 +713,21 @@ const MathBotArena: React.FC = () => {
             difficultyTier: currentTask.d
           });
           console.log(`[Stats] Recorded correct answer for ${skillId}`);
+
+          // ✅ PERSISTENT ATTEMPT LOGGING (for progress tracking)
+          recordAttempt({
+            attemptId: generateAttemptId(),
+            timestamp: Date.now(),
+            mode: session.mode,
+            questionId: currentTask._questionId || `q_${currentTask.index}`,
+            skillId,
+            correct: true,
+            responseTimeMs: timeMs,
+            difficultyScore: tierToDifficultyScore(currentTask.d),
+            sessionId: session.id || `session_${Date.now()}`,
+            userAge: userData.age,
+            xpGained
+          });
         }
       } catch (error) {
         console.error('[Stats] Failed to record answer:', error);
@@ -799,6 +815,21 @@ const MathBotArena: React.FC = () => {
       } catch (error) {
         console.error('[Stats] Failed to record answer:', error);
       }
+
+      // 🆕 Record incorrect answer to attempt log
+      recordAttempt({
+        attemptId: generateAttemptId(),
+        timestamp: Date.now(),
+        mode: session.mode,
+        questionId: currentTask._questionId || `q_${currentTask.index}`,
+        skillId: skillId || session.skillType!,
+        correct: false,
+        responseTimeMs: timeMs,
+        difficultyScore: tierToDifficultyScore(currentTask.d),
+        sessionId: session.id || `session_${Date.now()}`,
+        userAge: userData.age,
+        xpGained: 0
+      });
 
       // Track error (✅ immutably)
       setPlayerBot(prev => ({
